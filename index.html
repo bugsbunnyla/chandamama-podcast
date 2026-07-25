@@ -253,6 +253,7 @@
         .status-msg.info { background: rgba(52, 152, 219, 0.15); color: #2980b9; border: 1px solid #2980b9; }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
     <div class="stars-bg"></div>
@@ -278,7 +279,7 @@
         <!-- WORKING DEMO PLAYER -->
         <section>
             <h2>🎵 Try It Now</h2>
-            <p class="section-desc">Press play to hear a sample story. This proves the player works — then upload your own episodes.</p>
+            <p class="section-desc">Press play to hear a sample story.</p>
 
             <div class="demo-player">
                 <h3>Welcome to Chandamama — Sample</h3>
@@ -312,49 +313,49 @@
             <p class="section-desc">Every story is adapted by native speakers, with culturally-rooted voices and music.</p>
 
             <div class="grid">
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇬🇧</span>
                     <span class="lang-name">English</span>
                     <span class="lang-native">English</span>
                     <span class="ep-count">Coming soon</span>
                 </div>
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇮🇳</span>
                     <span class="lang-name">Telugu</span>
                     <span class="lang-native">తెలుగు</span>
                     <span class="ep-count">Coming soon</span>
                 </div>
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇮🇳</span>
                     <span class="lang-name">Hindi</span>
                     <span class="lang-native">हिन्दी</span>
                     <span class="ep-count">Coming soon</span>
                 </div>
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇨🇳</span>
                     <span class="lang-name">Chinese</span>
                     <span class="lang-native">中文</span>
                     <span class="ep-count">Coming soon</span>
                 </div>
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇪🇸</span>
                     <span class="lang-name">Spanish</span>
                     <span class="lang-native">Español</span>
                     <span class="ep-count">Coming soon</span>
                 </div>
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇮🇹</span>
                     <span class="lang-name">Italian</span>
                     <span class="lang-native">Italiano</span>
                     <span class="ep-count">Coming soon</span>
                 </div>
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇩🇪</span>
                     <span class="lang-name">German</span>
                     <span class="lang-native">Deutsch</span>
                     <span class="ep-count">Coming soon</span>
                 </div>
-                <div class="lang-card" onclick="alert('Coming soon! Record your episode and upload it.')">
+                <div class="lang-card" onclick="alert('Coming soon!')">
                     <span class="flag">🇫🇷</span>
                     <span class="lang-name">French</span>
                     <span class="lang-native">Français</span>
@@ -375,21 +376,6 @@
             </div>
         </section>
 
-        <section style="text-align:center;">
-            <h2>How to Add Your Episodes</h2>
-            <p style="color:rgba(255,255,255,0.7); max-width:600px; margin:0 auto 20px;">
-                1. Record your story · 2. Upload MP3 to Internet Archive · 3. Paste the URL below
-            </p>
-            <div style="background:rgba(255,255,255,0.05); border-radius:12px; padding:20px; max-width:600px; margin:0 auto; border:1px solid rgba(255,255,255,0.1);">
-                <p style="color:rgba(255,255,255,0.6); font-size:0.9rem; font-family:monospace;">
-                    Replace this audio URL in the code:<br>
-                    <span style="color:var(--moon-gold);">https://upload.wikimedia.org/...</span><br><br>
-                    With your own:<br>
-                    <span style="color:var(--moon-gold);">https://archive.org/download/your-file.mp3</span>
-                </p>
-            </div>
-        </section>
-
     </main>
 
     <footer>
@@ -403,10 +389,8 @@
         // ============================================
 
         // REAL working audio URL from Wikimedia Commons (public domain)
-        // This is a short classical piece that will definitely play
         const AUDIO_URL = "https://upload.wikimedia.org/wikipedia/commons/8/8f/Fur_Elise.ogg";
 
-        // Fallback: if the above fails, we can generate a test tone
         let audio = new Audio(AUDIO_URL);
         let isPlaying = false;
 
@@ -427,7 +411,7 @@
             playBtn.textContent = '▶️';
             progress.value = 0;
             curTime.textContent = '0:00';
-            showStatus('✅ Finished playing! Now record your own episode and replace the URL.', 'ok');
+            showStatus('✅ Finished playing!', 'ok');
         });
         audio.addEventListener('error', (e) => {
             console.error('Audio error:', e);
