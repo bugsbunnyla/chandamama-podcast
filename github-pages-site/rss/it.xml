@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" 
+     xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+     version="2.0">
+  <channel>
+    <title>Chandamama Moonlight Stories — Italian</title>
+    <link>https://yourname.github.io/chandamama-podcast/languages/it.html</link>
+    <language>it</language>
+    <description>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in Italian for children ages 4-12. Free, forever.</description>
+    <itunes:author>Chandamama Cultural Preservation Project</itunes:author>
+    <itunes:subtitle>Sanskrit stories for children in Italian</itunes:subtitle>
+    <itunes:summary>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in Italian for children ages 4-12. Each episode features culturally-rooted storytelling, gentle music, and interactive moments for young listeners.</itunes:summary>
+    <itunes:owner>
+      <itunes:name>Chandamama Project</itunes:name>
+      <itunes:email>hello@chandamama-stories.org</itunes:email>
+    </itunes:owner>
+    <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-it.jpg"/>
+    <itunes:category text="Kids &amp; Family">
+      <itunes:category text="Stories for Kids"/>
+    </itunes:category>
+    <itunes:category text="Education">
+      <itunes:category text="Language Learning"/>
+    </itunes:category>
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:type>episodic</itunes:type>
+    <item>
+      <title>Benvenuti a Chandamama — La Casa delle Storie di Zio Luna</title>
+      <description>Benvenuti alla Casa delle Storie di Zio Luna. La Nonna Luna racconterà storie magiche.</description>
+      <enclosure url="https://archive.org/download/chandamama-italian-ep00/chandamama-it-ep00-welcome.mp3" length="0" type="audio/mpeg"/>
+      <guid>https://yourname.github.io/chandamama-podcast/rss/it.xml#chandamama-it-ep00-welcome</guid>
+      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>8:00</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-it.jpg"/>
+      <itunes:category text="Kids &amp; Family">
+        <itunes:category text="Stories for Kids"/>
+      </itunes:category>
+    </item>
+    <item>
+      <title>Il Re e la Regina — Un Mistero Reale</title>
+      <description>Dalla copertina di dicembre 1999: un re indica qualcosa in lontananza, e la sua regina ascolta con stupore.</description>
+      <enclosure url="https://archive.org/download/chandamama-italian-ep01/chandamama-it-ep01-royal.mp3" length="0" type="audio/mpeg"/>
+      <guid>https://yourname.github.io/chandamama-podcast/rss/it.xml#chandamama-it-ep01-royal</guid>
+      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>15:00</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-it.jpg"/>
+      <itunes:category text="Kids &amp; Family">
+        <itunes:category text="Stories for Kids"/>
+      </itunes:category>
+    </item>
+    <item>
+      <title>L'Enigma del Dr. Coniglio</title>
+      <description>Aiuta Smita a raggiungere il dentista attraverso un labirinto magico!</description>
+      <enclosure url="https://archive.org/download/chandamama-italian-ep02/chandamama-it-ep02-rabbit.mp3" length="0" type="audio/mpeg"/>
+      <guid>https://yourname.github.io/chandamama-podcast/rss/it.xml#chandamama-it-ep02-rabbit</guid>
+      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>10:00</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-it.jpg"/>
+      <itunes:category text="Kids &amp; Family">
+        <itunes:category text="Stories for Kids"/>
+      </itunes:category>
+    </item>
+  </channel>
+</rss>
