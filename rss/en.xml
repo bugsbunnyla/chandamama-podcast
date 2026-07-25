@@ -4,7 +4,7 @@
      version="2.0">
   <channel>
     <title>Chandamama Moonlight Stories — English</title>
-    <link>https://yourname.github.io/chandamama-podcast/languages/en.html</link>
+    <link>https://bugsbunnyla.github.io/chandamama-podcast/languages/en.html</link>
     <language>en</language>
     <description>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in English for children ages 4-12. Free, forever.</description>
     <itunes:author>Chandamama Cultural Preservation Project</itunes:author>
@@ -14,7 +14,7 @@
       <itunes:name>Chandamama Project</itunes:name>
       <itunes:email>hello@chandamama-stories.org</itunes:email>
     </itunes:owner>
-    <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
+    <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
     <itunes:category text="Kids &amp; Family">
       <itunes:category text="Stories for Kids"/>
     </itunes:category>
@@ -27,11 +27,11 @@
       <title>Welcome to Chandamama — Uncle Moon's Story House</title>
       <description>A warm introduction to the magical world of Chandamama. Meet Uncle Moonbeam, learn about the magazine's history, and discover what wonders await in the stories ahead.</description>
       <enclosure url="https://archive.org/download/chandamama-english-ep00/chandamama-en-ep00-welcome.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/en.xml#chandamama-en-ep00-welcome</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/en.xml#chandamama-en-ep00-welcome</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>8:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>
@@ -40,11 +40,11 @@
       <title>The King and the Queen — A Royal Mystery</title>
       <description>From the cover of the December 1999 issue: a king points to something far away, and his queen listens with wonder. What does he see? A treasure, a dragon, or a new adventure?</description>
       <enclosure url="https://archive.org/download/chandamama-english-ep01/chandamama-en-ep01-royal.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/en.xml#chandamama-en-ep01-royal</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/en.xml#chandamama-en-ep01-royal</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>15:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>
@@ -53,11 +53,11 @@
       <title>Dr. Rabbit's Puzzle — A Maze Adventure</title>
       <description>Help Smita find her way to the dentist through a magical maze! A fun interactive story about dental health, bravery, and helping friends.</description>
       <enclosure url="https://archive.org/download/chandamama-english-ep02/chandamama-en-ep02-rabbit.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/en.xml#chandamama-en-ep02-rabbit</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/en.xml#chandamama-en-ep02-rabbit</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>10:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-en.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>

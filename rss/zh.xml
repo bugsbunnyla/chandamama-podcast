@@ -4,7 +4,7 @@
      version="2.0">
   <channel>
     <title>Chandamama Moonlight Stories — Chinese</title>
-    <link>https://yourname.github.io/chandamama-podcast/languages/zh.html</link>
+    <link>https://bugsbunnyla.github.io/chandamama-podcast/languages/zh.html</link>
     <language>zh</language>
     <description>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in Chinese for children ages 4-12. Free, forever.</description>
     <itunes:author>Chandamama Cultural Preservation Project</itunes:author>
@@ -14,7 +14,7 @@
       <itunes:name>Chandamama Project</itunes:name>
       <itunes:email>hello@chandamama-stories.org</itunes:email>
     </itunes:owner>
-    <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
+    <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
     <itunes:category text="Kids &amp; Family">
       <itunes:category text="Stories for Kids"/>
     </itunes:category>
@@ -27,11 +27,11 @@
       <title>欢迎来到月亮叔叔的故事屋</title>
       <description>欢迎来到Chandamama月光故事屋。评书老师将为您讲述古老的故事。</description>
       <enclosure url="https://archive.org/download/chandamama-chinese-ep00/chandamama-zh-ep00-welcome.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/zh.xml#chandamama-zh-ep00-welcome</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/zh.xml#chandamama-zh-ep00-welcome</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>8:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>
@@ -40,11 +40,11 @@
       <title>国王与王后 — 一个皇家之谜</title>
       <description>来自1999年12月封面：国王指着远方，王后惊奇地听着。</description>
       <enclosure url="https://archive.org/download/chandamama-chinese-ep01/chandamama-zh-ep01-royal.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/zh.xml#chandamama-zh-ep01-royal</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/zh.xml#chandamama-zh-ep01-royal</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>15:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>
@@ -53,11 +53,11 @@
       <title>兔子医生的谜题</title>
       <description>帮助Smita通过魔法迷宫找到牙医！</description>
       <enclosure url="https://archive.org/download/chandamama-chinese-ep02/chandamama-zh-ep02-rabbit.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/zh.xml#chandamama-zh-ep02-rabbit</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/zh.xml#chandamama-zh-ep02-rabbit</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>10:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-zh.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>

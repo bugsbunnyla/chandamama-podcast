@@ -4,7 +4,7 @@
      version="2.0">
   <channel>
     <title>Chandamama Moonlight Stories — Spanish</title>
-    <link>https://yourname.github.io/chandamama-podcast/languages/es.html</link>
+    <link>https://bugsbunnyla.github.io/chandamama-podcast/languages/es.html</link>
     <language>es</language>
     <description>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in Spanish for children ages 4-12. Free, forever.</description>
     <itunes:author>Chandamama Cultural Preservation Project</itunes:author>
@@ -14,7 +14,7 @@
       <itunes:name>Chandamama Project</itunes:name>
       <itunes:email>hello@chandamama-stories.org</itunes:email>
     </itunes:owner>
-    <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
+    <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
     <itunes:category text="Kids &amp; Family">
       <itunes:category text="Stories for Kids"/>
     </itunes:category>
@@ -27,11 +27,11 @@
       <title>Bienvenidos a Chandamama — La Casa de Cuentos del Tío Luna</title>
       <description>Bienvenidos a la Casa de Cuentos del Tío Luna. La Abuela Estrella les contará historias mágicas.</description>
       <enclosure url="https://archive.org/download/chandamama-spanish-ep00/chandamama-es-ep00-welcome.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/es.xml#chandamama-es-ep00-welcome</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/es.xml#chandamama-es-ep00-welcome</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>8:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>
@@ -40,11 +40,11 @@
       <title>El Rey y la Reina — Un Misterio Real</title>
       <description>De la portada de diciembre de 1999: un rey señala algo a lo lejos, y su reina escucha con asombro.</description>
       <enclosure url="https://archive.org/download/chandamama-spanish-ep01/chandamama-es-ep01-royal.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/es.xml#chandamama-es-ep01-royal</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/es.xml#chandamama-es-ep01-royal</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>15:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>
@@ -53,11 +53,11 @@
       <title>El Acertijo del Dr. Conejo</title>
       <description>¡Ayuda a Smita a llegar al dentista a través de un laberinto mágico!</description>
       <enclosure url="https://archive.org/download/chandamama-spanish-ep02/chandamama-es-ep02-rabbit.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://yourname.github.io/chandamama-podcast/rss/es.xml#chandamama-es-ep02-rabbit</guid>
+      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/es.xml#chandamama-es-ep02-rabbit</guid>
       <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
       <itunes:duration>10:00</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://yourname.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
+      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-es.jpg"/>
       <itunes:category text="Kids &amp; Family">
         <itunes:category text="Stories for Kids"/>
       </itunes:category>
