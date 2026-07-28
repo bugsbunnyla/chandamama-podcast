@@ -623,10 +623,8 @@ Solutions:
 
   function parseStory() {
     storyLines = [];
-    const allText = pages.map(p => p.text).join("
-");
-    const lines = allText.split(/
-+/).filter(l => l.trim().length > 8);
+    const allText = pages.map(p => p.text).join("\n");
+    const lines = allText.split(/\n+/).filter(l => l.trim().length > 8);
 
     let currentSpeaker = "Narrator";
     lines.forEach((line, idx) => {
@@ -764,9 +762,7 @@ Solutions:
   function assignImageToCharacter(url) {
     const names = Object.keys(characterMap);
     if (names.length === 0) return alert("No characters detected yet.");
-    const name = prompt("Assign to character:
-" + names.join("
-"), names[0]);
+    const name = prompt("Assign to character:\n" + names.join("\n"), names[0]);
     if (name && characterMap[name]) {
       characterMap[name].image = url;
       renderCharacterStrip();
@@ -986,19 +982,12 @@ Solutions:
 
   function downloadScript() {
     if (storyLines.length === 0) return alert("No story loaded.");
-    let script = "CHANDAMAMA PODCAST THEATER — SCRIPT
-";
-    script += "=".repeat(50) + "
-
-";
+    let script = "CHANDAMAMA PODCAST THEATER — SCRIPT\n";
+    script += "=".repeat(50) + "\n\n";
     storyLines.forEach((line, i) => {
-      script += "[" + String(i+1).padStart(3, "0") + "] " + line.speaker.toUpperCase() + "
-";
-      script += "    " + line.text + "
-";
-      script += "    [Page " + line.page + "]
-
-";
+      script += "[" + String(i+1).padStart(3, "0") + "] " + line.speaker.toUpperCase() + "\n";
+      script += "    " + line.text + "\n";
+      script += "    [Page " + line.page + "]\n\n";
     });
     const blob = new Blob([script], { type: "text/plain" });
     const a = document.createElement("a");
