@@ -584,7 +584,7 @@ Or simply upload a PDF file from your device — no proxy needed!`);
       }
 
       parseStory();
-      setStatus("✅ Loaded "" + sourceName + "" · " + pdfDoc.numPages + " pages · " + storyLines.length + " lines · " + Object.keys(characterMap).length + " chars", "success");
+      setStatus(`✅ Loaded "${sourceName}" · ${pdfDoc.numPages} pages · ${storyLines.length} lines · ${Object.keys(characterMap).length} chars`, "success");
       if (storyLines.length > 0) { currentLine = 0; renderLine(); }
       updateStats();
     } catch (e) {
