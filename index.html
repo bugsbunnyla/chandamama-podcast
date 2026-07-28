@@ -645,8 +645,7 @@ Solutions:
 
     if (storyLines.length === 0) {
       pages.forEach((p, pi) => {
-        const paras = p.text.split(/
-{2,}/);
+        const paras = p.text.split(/\n{2,}/);
         paras.forEach(para => {
           if (para.trim().length > 20) {
             storyLines.push({ speaker: "Narrator", text: para.trim(), archetype: ARCHETYPES.narrator, page: pi + 1 });
