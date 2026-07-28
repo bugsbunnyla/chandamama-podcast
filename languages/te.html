@@ -1,126 +1,159 @@
 <!DOCTYPE html>
 <html lang="te">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chandamama — Telugu | Moonlight Stories</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="alternate" type="application/rss+xml" title="Chandamama Telugu" href="../rss/te.xml">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chandamama — Telugu | Moonlight Stories</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="alternate" type="application/rss+xml" title="Chandamama Telugu" href="../rss/te.xml">
 </head>
 <body class="lang-page">
-    <div class="stars-bg"></div>
+  <div class="stars-bg"></div>
+  <header class="hero">
+    <a href="../index.html" class="back-link">← Back to All Languages</a>
+    <div class="moon">
+      <div class="moon-face">🇮🇳</div>
+      <div class="moon-glow"></div>
+    </div>
+    <h1>Chandamama — Telugu</h1>
+    <p class="subtitle">తెలుగు</p>
+    <p class="tagline">Narrated by Uncle Moonbeam & The Royal Cast</p>
+    <div class="hero-badges">
+      <span class="badge">🎭 Multi-Cast Theater</span>
+      <span class="badge">🎧 3 Episodes</span>
+      <span class="badge">📡 <a href="../rss/te.xml" style="color:inherit;text-decoration:underline;">RSS Feed</a></span>
+    </div>
+  </header>
+  <main style="max-width: 900px;">
+    <div class="voice-notice">
+      <span>🎙️</span>
+      <div>
+        <strong>Theater Mode uses your browser's built-in voices.</strong><br>
+        Each character speaks with a distinct voice. For best results, use Chrome, Edge, or Safari.
+        <br><em>Note: Stories are currently in English. Translations welcome!</em>
+      </div>
+    </div>
+    <section>
+      <h2>Episodes</h2>
+      <div class="episode-list" id="episodeList"></div>
+    </section>
+  </main>
+  <footer>
+    <p>Made with 🌙 for children everywhere.</p>
+    <p><a href="../index.html">← Back to All Languages</a></p>
+  </footer>
+  <script src="../assets/js/theater.js"></script>
+  <script src="../assets/js/player.js"></script>
+  <script>
+    const EPISODES = [
+      { id: "ep00", title: "Welcome to Chandamama — Uncle Moon's Story House", subtitle: "A warm introduction to the magical world of Chandamama", art: "🌙", duration: "8:00", date: "Dec 1999", ages: "4–12", audio: "../audio/te/ep00.mp3", cast: ["Uncle Moonbeam"] },
+      { id: "ep01", title: "The King and the Queen — A Royal Mystery", subtitle: "From the cover of the December 1999 issue: What does the King see?", art: "👑", duration: "15:00", date: "Dec 1999", ages: "7–9", audio: "../audio/te/ep01.mp3", cast: ["Uncle Moonbeam", "King Vikramaditya", "Queen Ananya", "Minister Gopal"] },
+      { id: "ep02", title: "Dr. Rabbit's Puzzle — A Maze Adventure", subtitle: "Help Smita find her way to the dentist through a magical maze!", art: "🐰", duration: "10:00", date: "Dec 1999", ages: "4–6", audio: "../audio/te/ep02.mp3", cast: ["Uncle Moonbeam", "Smita", "Dr. Rabbit", "Mama"] }
+    ];
 
-    <header class="hero">
-        <a href="../index.html" class="back-link">← Back to All Languages</a>
-        <div class="moon">
-            <div class="moon-face">🇮🇳</div>
-            <div class="moon-glow"></div>
-        </div>
-        <h1>Chandamama — Telugu</h1>
-        <p class="subtitle">తెలుగు</p>
-        <p class="tagline">Narrated by బొమ్మలాట కథాకారుడు (Bommalata Kathakaru)</p>
-        <div class="hero-badges">
-            <span class="badge">🎧 3 Episodes</span>
-            <span class="badge">📡 <a href="../rss/te.xml" style="color:inherit;text-decoration:underline;">RSS Feed</a></span>
-        </div>
-    </header>
-
-    <main>
-        <section>
-            <h2>Episodes</h2>
-            <div class="episode-list">
-
-                <div class="episode-card" data-audio="https://archive.org/download/chandamama-telugu-ep00/chandamama-te-ep00-welcome.mp3" data-title="చందమామకు స్వాగతం" data-lang="Telugu">
-                    <div class="episode-art">🌙</div>
-                    <div class="episode-info">
-                        <h3>చందమామకు స్వాగతం</h3>
-                        <div class="episode-meta">
-                            <span>⏱️ 8:00</span>
-                            <span>📅 Dec 1999</span>
-                            <span>👶 Ages 4-12</span>
-                        </div>
-                        <p class="episode-desc">చందమామ కథల ఇంటికి మీకు స్వాగతం. బొమ్మలాట కథాకారుడు మీకు కథలు చెబుతాడు.</p>
-                        <div class="episode-actions">
-                            <button class="btn-play">▶️ Play</button>
-                            <a class="btn-download" href="https://archive.org/download/chandamama-telugu-ep00/chandamama-te-ep00-welcome.mp3" download>⬇️ Download</a>
-                            <button class="btn-transcript">📄 Transcript</button>
-                        </div>
-                        <div class="transcript-panel">
-                            <h4>Transcript — చందమామకు స్వాగతం</h4>
-                            <p><em>Transcript will be added when episode is recorded.</em></p>
-                            <p>This episode is adapted from Chandamama Sanskrit, December 1999, Editorial.</p>
-                            <p><strong>Narrator:</strong> బొమ్మలాట కథాకారుడు (Bommalata Kathakaru)</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="episode-card" data-audio="https://archive.org/download/chandamama-telugu-ep01/chandamama-te-ep01-royal.mp3" data-title="రాజు మరియు రాణి — ఒక రాజసీ కథ" data-lang="Telugu">
-                    <div class="episode-art">👑</div>
-                    <div class="episode-info">
-                        <h3>రాజు మరియు రాణి — ఒక రాజసీ కథ</h3>
-                        <div class="episode-meta">
-                            <span>⏱️ 15:00</span>
-                            <span>📅 Dec 1999</span>
-                            <span>👶 Ages 7-9</span>
-                        </div>
-                        <p class="episode-desc">1999 డిసెంబర్ ముఖచిత్రం నుండి: ఒక రాజు దూరంగా చూపిస్తున్నాడు. అతని రాణి ఆశ్చర్యంగా వింటోంది.</p>
-                        <div class="episode-actions">
-                            <button class="btn-play">▶️ Play</button>
-                            <a class="btn-download" href="https://archive.org/download/chandamama-telugu-ep01/chandamama-te-ep01-royal.mp3" download>⬇️ Download</a>
-                            <button class="btn-transcript">📄 Transcript</button>
-                        </div>
-                        <div class="transcript-panel">
-                            <h4>Transcript — రాజు మరియు రాణి — ఒక రాజసీ కథ</h4>
-                            <p><em>Transcript will be added when episode is recorded.</em></p>
-                            <p>This episode is adapted from Chandamama Sanskrit, December 1999, Cover.</p>
-                            <p><strong>Narrator:</strong> బొమ్మలాట కథాకారుడు (Bommalata Kathakaru)</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="episode-card" data-audio="https://archive.org/download/chandamama-telugu-ep02/chandamama-te-ep02-rabbit.mp3" data-title="డా. రాబిట్ పజిల్" data-lang="Telugu">
-                    <div class="episode-art">🐰</div>
-                    <div class="episode-info">
-                        <h3>డా. రాబిట్ పజిల్</h3>
-                        <div class="episode-meta">
-                            <span>⏱️ 10:00</span>
-                            <span>📅 Dec 1999</span>
-                            <span>👶 Ages 4-6</span>
-                        </div>
-                        <p class="episode-desc">స్మితను డెంటిస్ట్ వద్దకు మేజికల్ మేజ్ ద్వారా తీసుకెళ్ళండి!</p>
-                        <div class="episode-actions">
-                            <button class="btn-play">▶️ Play</button>
-                            <a class="btn-download" href="https://archive.org/download/chandamama-telugu-ep02/chandamama-te-ep02-rabbit.mp3" download>⬇️ Download</a>
-                            <button class="btn-transcript">📄 Transcript</button>
-                        </div>
-                        <div class="transcript-panel">
-                            <h4>Transcript — డా. రాబిట్ పజిల్</h4>
-                            <p><em>Transcript will be added when episode is recorded.</em></p>
-                            <p>This episode is adapted from Chandamama Sanskrit, December 1999, Pages 2-3.</p>
-                            <p><strong>Narrator:</strong> బొమ్మలాట కథాకారుడు (Bommalata Kathakaru)</p>
-                        </div>
-                    </div>
-                </div>
-
+    function renderEpisodes() {
+      const container = document.getElementById('episodeList');
+      EPISODES.forEach(ep => {
+        const card = document.createElement('div');
+        card.className = 'episode-card';
+        card.dataset.audio = ep.audio;
+        card.dataset.title = ep.title;
+        card.dataset.lang = 'Telugu';
+        card.id = ep.id;
+        card.innerHTML = `
+          <div class="episode-art">${ep.art}</div>
+          <div class="episode-info">
+            <h3>${ep.title}</h3>
+            <div class="episode-meta">
+              <span>⏱️ ${ep.duration}</span>
+              <span>📅 ${ep.date}</span>
+              <span>👶 Ages ${ep.ages}</span>
+              <span>🎭 ${ep.cast.length} Characters</span>
             </div>
-        </section>
-
-        <section class="subscribe">
-            <h2>Subscribe in Your Podcast App</h2>
-            <p>Copy this RSS feed URL and paste it into any podcast app:</p>
-            <div class="rss-grid">
-                <code>../rss/te.xml</code>
+            <p class="episode-desc">${ep.subtitle}</p>
+            <div class="episode-actions">
+              <button class="btn-play-ep" onclick="startTheater('${ep.id}')">🎭 Listen in Theater</button>
+              <a class="btn-download" href="${ep.audio}" download>⬇️ Download MP3</a>
+              <button class="btn-transcript" onclick="toggleTranscript('${ep.id}')">📄 Transcript</button>
+              <button class="btn-cast" onclick="toggleCast('${ep.id}')">🎭 Cast</button>
             </div>
-            <p class="rss-note">Replace <code>yourname</code> with your GitHub username.</p>
-        </section>
-    </main>
+            <div class="transcript-panel" id="transcript-${ep.id}"><h4>📄 Transcript — ${ep.title}</h4><div id="transcript-content-${ep.id}"><p><em>Loading transcript...</em></p></div></div>
+            <div class="cast-panel" id="cast-${ep.id}"><h4>🎭 Cast — ${ep.title}</h4><div class="cast-panel-grid" id="cast-content-${ep.id}"></div></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
 
-    <footer>
-        <p>Made with 🌙 for children everywhere.</p>
-        <p><a href="../index.html">← All Languages</a></p>
-    </footer>
+    async function startTheater(episodeId) {
+      if (!window.speechSynthesis) { alert('Your browser does not support Theater Mode.'); return; }
+      await ChandamamaTheater.openEpisode('../stories/en.json', episodeId);
+    }
 
-    <script src="../assets/js/player.js"></script>
+    async function toggleTranscript(episodeId) {
+      const panel = document.getElementById('transcript-' + episodeId);
+      const content = document.getElementById('transcript-content-' + episodeId);
+      const isActive = panel.classList.contains('active');
+      document.querySelectorAll('.transcript-panel, .cast-panel').forEach(p => p.classList.remove('active'));
+      if (isActive) return;
+      panel.classList.add('active');
+      if (content.dataset.loaded !== 'true') {
+        try {
+          const resp = await fetch('../stories/en.json');
+          const story = await resp.json();
+          const episode = story.episodes.find(e => e.id === episodeId);
+          if (episode && episode.script) {
+            content.innerHTML = episode.script.map((line, i) => `
+              <div class="transcript-line" data-index="${i}" onclick="jumpToLine('${episodeId}', ${i})">
+                <div class="transcript-speaker">${line.speaker}</div>
+                <div class="transcript-text">${line.text}</div>
+              </div>
+            `).join('');
+            content.dataset.loaded = 'true';
+          }
+        } catch (e) { content.innerHTML = '<p><em>Could not load transcript.</em></p>'; }
+      }
+    }
+
+    async function toggleCast(episodeId) {
+      const panel = document.getElementById('cast-' + episodeId);
+      const content = document.getElementById('cast-content-' + episodeId);
+      const isActive = panel.classList.contains('active');
+      document.querySelectorAll('.transcript-panel, .cast-panel').forEach(p => p.classList.remove('active'));
+      if (isActive) return;
+      panel.classList.add('active');
+      if (content.dataset.loaded !== 'true') {
+        try {
+          const resp = await fetch('../stories/en.json');
+          const story = await resp.json();
+          const episode = story.episodes.find(e => e.id === episodeId);
+          if (episode && episode.cast) {
+            content.innerHTML = episode.cast.map(c => `
+              <div class="cast-panel-card">
+                <div class="cast-panel-emoji">${c.emoji}</div>
+                <div class="cast-panel-name">${c.name}</div>
+                <div class="cast-panel-role">${c.role}</div>
+                <div class="cast-panel-desc">${c.description}</div>
+              </div>
+            `).join('');
+            content.dataset.loaded = 'true';
+          }
+        } catch (e) { content.innerHTML = '<p><em>Could not load cast.</em></p>'; }
+      }
+    }
+
+    function jumpToLine(episodeId, lineIndex) {
+      startTheater(episodeId).then(() => {
+        setTimeout(() => {
+          window.theater.currentLine = lineIndex;
+          window.theater.renderLine(lineIndex);
+          if (window.theater.isPlaying) window.theater.speakLine(lineIndex);
+        }, 500);
+      });
+    }
+
+    renderEpisodes();
+  </script>
 </body>
 </html>

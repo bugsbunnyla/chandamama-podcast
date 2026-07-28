@@ -1,278 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chandamama Moonlight Stories — Free Children's Podcast</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --moon-gold: #F4D03F;
-            --moon-silver: #E8E8E8;
-            --night-blue: #1a1a2e;
-            --night-purple: #16213e;
-            --star-white: #ffffff;
-            --warm-cream: #FFF8E7;
-            --accent-saffron: #FF9933;
-            --accent-green: #138808;
-            --text-dark: #2c3e50;
-            --text-light: #7f8c8d;
-            --card-bg: rgba(255, 255, 255, 0.95);
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            --radius: 16px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(180deg, var(--night-blue) 0%, var(--night-purple) 50%, #0f0f23 100%);
-            color: var(--star-white);
-            min-height: 100vh;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-        .stars-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 0;
-            background-image: 
-                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.8), transparent),
-                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.6), transparent),
-                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.9), transparent),
-                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.7), transparent),
-                radial-gradient(1px 1px at 230px 80px, rgba(255,255,255,0.5), transparent),
-                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.8), transparent),
-                radial-gradient(1px 1px at 350px 50px, rgba(255,255,255,0.6), transparent),
-                radial-gradient(2px 2px at 450px 180px, rgba(255,255,255,0.7), transparent),
-                radial-gradient(1px 1px at 500px 90px, rgba(255,255,255,0.9), transparent),
-                radial-gradient(2px 2px at 600px 130px, rgba(255,255,255,0.5), transparent);
-            animation: twinkle 8s ease-in-out infinite alternate;
-        }
-        @keyframes twinkle { 0% { opacity: 0.5; } 100% { opacity: 1; } }
-        .hero {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            padding: 60px 20px 40px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .moon { position: relative; display: inline-block; margin-bottom: 20px; }
-        .moon-face {
-            font-size: 80px;
-            display: block;
-            animation: float 4s ease-in-out infinite;
-            filter: drop-shadow(0 0 30px rgba(244, 208, 63, 0.5));
-        }
-        .moon-glow {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 120px; height: 120px;
-            background: radial-gradient(circle, rgba(244,208,63,0.3) 0%, transparent 70%);
-            border-radius: 50%;
-            animation: pulse 3s ease-in-out infinite;
-        }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-        @keyframes pulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; } 50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.3; } }
-        .hero h1 {
-            font-size: clamp(2.5rem, 6vw, 4rem);
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--moon-gold), #fff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-            letter-spacing: -1px;
-        }
-        .subtitle { font-size: clamp(1.1rem, 2.5vw, 1.5rem); color: var(--moon-silver); font-weight: 600; margin-bottom: 12px; }
-        .tagline { font-size: 1rem; color: rgba(255,255,255,0.7); max-width: 500px; margin: 0 auto 24px; }
-        .hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-        .badge {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            color: var(--moon-silver);
-        }
-        main { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 20px 100px; }
-        section { margin-bottom: 50px; }
-        section h2 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; margin-bottom: 12px; color: var(--moon-gold); text-align: center; }
-        .section-desc { text-align: center; color: rgba(255,255,255,0.7); margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto; }
-
-        /* Language Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-        .lang-card {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 24px 16px;
-            text-align: center;
-            text-decoration: none;
-            color: var(--text-dark);
-            transition: var(--transition);
-            border: 2px solid transparent;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-            display: block;
-        }
-        .lang-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent-saffron), var(--accent-green));
-            transform: scaleX(0);
-            transition: var(--transition);
-        }
-        .lang-card:hover { transform: translateY(-6px); box-shadow: var(--shadow); border-color: var(--moon-gold); }
-        .lang-card:hover::before { transform: scaleX(1); }
-        .lang-card .flag { font-size: 2.5rem; display: block; margin-bottom: 8px; }
-        .lang-card .lang-name { display: block; font-weight: 700; font-size: 1.1rem; margin-bottom: 2px; }
-        .lang-card .lang-native { display: block; font-size: 0.9rem; color: var(--text-light); margin-bottom: 8px; }
-        .lang-card .ep-count {
-            display: inline-block;
-            background: var(--night-blue);
-            color: var(--moon-gold);
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        /* About */
-        .about {
-            background: rgba(255,255,255,0.05);
-            border-radius: var(--radius);
-            padding: 40px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .about p { color: rgba(255,255,255,0.85); margin-bottom: 16px; font-size: 1.05rem; }
-        .about strong { color: var(--moon-gold); }
-        .about em { color: #a8d8ea; font-style: italic; }
-        .source-link { margin-top: 24px; }
-        .source-link a { color: var(--moon-gold); text-decoration: none; font-weight: 600; border-bottom: 2px solid var(--moon-gold); padding-bottom: 2px; transition: var(--transition); }
-        .source-link a:hover { color: #fff; border-color: #fff; }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 40px 20px;
-            color: rgba(255,255,255,0.5);
-            font-size: 0.9rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            position: relative;
-            z-index: 1;
-        }
-        footer a { color: var(--moon-gold); text-decoration: none; }
-
-        /* Responsive */
-        @media (max-width: 600px) {
-            .about { padding: 24px; }
-        }
-    </style>
-<base target="_blank">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chandamama Moonlight Stories — Free Children's Podcast</title>
+  <meta name="description" content="Ancient Sanskrit tales retold as free multi-cast podcasts in 8 languages for children everywhere.">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <div class="stars-bg"></div>
+  <div class="stars-bg"></div>
+  <div class="shooting-star" style="animation-delay: 0s;"></div>
+  <div class="shooting-star" style="animation-delay: 3s; top: 40%;"></div>
+  <div class="shooting-star" style="animation-delay: 5s; top: 60%;"></div>
 
-    <header class="hero">
-        <div class="moon">
-            <div class="moon-face">🌙</div>
-            <div class="moon-glow"></div>
+  <header class="hero">
+    <div class="moon">
+      <div class="moon-face">🌙</div>
+      <div class="moon-glow"></div>
+    </div>
+    <h1>Chandamama</h1>
+    <p class="subtitle">Moonlight Stories for Little Travelers</p>
+    <p class="tagline">Ancient Sanskrit tales, brought to life by a cast of characters — completely free, in 8 languages, forever.</p>
+    <div class="hero-badges">
+      <span class="badge">🎭 Multi-Cast Theater</span>
+      <span class="badge">🎧 3 Episodes</span>
+      <span class="badge">🌍 8 Languages</span>
+      <span class="badge">📖 Interactive Transcripts</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Featured Episode -->
+    <section>
+      <h2>🌟 Featured Episode</h2>
+      <p class="section-desc">Step into the theater. Each character speaks in their own voice.</p>
+
+      <div class="featured-episode">
+        <div class="featured-header">
+          <span class="featured-art">👑</span>
+          <div class="featured-meta">
+            <h3>The King and the Queen — A Royal Mystery</h3>
+            <p>Episode 1 · 15 min · Ages 7–9 · 4 Characters</p>
+          </div>
         </div>
-        <h1>Chandamama</h1>
-        <p class="subtitle">Moonlight Stories for Little Travelers</p>
-        <p class="tagline">Ancient Sanskrit tales, retold in 8 languages — completely free, forever.</p>
-        <div class="hero-badges">
-            <span class="badge">🎧 Podcast</span>
-            <span class="badge">📖 Storybook</span>
-            <span class="badge">🎨 Activities</span>
-            <span class="badge">🌍 8 Languages</span>
+        <p style="color: rgba(255,255,255,0.75); line-height: 1.7;">
+          From the cover of the December 1999 issue: King Vikramaditya sees a mysterious golden light beyond the seven hills. 
+          Is it the legendary Lamp of Dharma? Join the King, Queen Ananya, and Minister Gopal in this royal mystery 
+          enacted by a full cast of voices.
+        </p>
+        <div class="featured-actions">
+          <a href="languages/en.html" class="btn-primary">🎭 Enter Theater</a>
+          <a href="languages/en.html#ep01" class="btn-secondary">📖 Read Transcript</a>
         </div>
-    </header>
+      </div>
+    </section>
 
-    <main>
-        <section class="language-grid">
-            <h2>Choose Your Language</h2>
-            <p class="section-desc">Every story is adapted by native speakers, with culturally-rooted voices and music. Select a language to explore episodes and press play to listen.</p>
+    <!-- Languages -->
+    <section class="language-grid">
+      <h2>Choose Your Language</h2>
+      <p class="section-desc">Every story is adapted by native speakers, with culturally-rooted voices and music. Select a language to explore episodes.</p>
 
-            <div class="grid">
-                <a href="./languages/en.html" class="lang-card" data-lang="en">
-                    <span class="flag">🇬🇧</span>
-                    <span class="lang-name">English</span>
-                    <span class="lang-native">English</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-                <a href="./languages/te.html" class="lang-card" data-lang="te">
-                    <span class="flag">🇮🇳</span>
-                    <span class="lang-name">Telugu</span>
-                    <span class="lang-native">తెలుగు</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-                <a href="./languages/hi.html" class="lang-card" data-lang="hi">
-                    <span class="flag">🇮🇳</span>
-                    <span class="lang-name">Hindi</span>
-                    <span class="lang-native">हिन्दी</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-                <a href="./languages/zh.html" class="lang-card" data-lang="zh">
-                    <span class="flag">🇨🇳</span>
-                    <span class="lang-name">Chinese</span>
-                    <span class="lang-native">中文</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-                <a href="./languages/es.html" class="lang-card" data-lang="es">
-                    <span class="flag">🇪🇸</span>
-                    <span class="lang-name">Spanish</span>
-                    <span class="lang-native">Español</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-                <a href="./languages/it.html" class="lang-card" data-lang="it">
-                    <span class="flag">🇮🇹</span>
-                    <span class="lang-name">Italian</span>
-                    <span class="lang-native">Italiano</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-                <a href="./languages/de.html" class="lang-card" data-lang="de">
-                    <span class="flag">🇩🇪</span>
-                    <span class="lang-name">German</span>
-                    <span class="lang-native">Deutsch</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-                <a href="./languages/fr.html" class="lang-card" data-lang="fr">
-                    <span class="flag">🇫🇷</span>
-                    <span class="lang-name">French</span>
-                    <span class="lang-native">Français</span>
-                    <span class="ep-count">3 episodes</span>
-                </a>
-            </div>
-        </section>
+      <div class="grid">
+        <a href="languages/en.html" class="lang-card">
+          <span class="flag">🇬🇧</span>
+          <span class="lang-name">English</span>
+          <span class="lang-native">English</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+        <a href="languages/te.html" class="lang-card">
+          <span class="flag">🇮🇳</span>
+          <span class="lang-name">Telugu</span>
+          <span class="lang-native">తెలుగు</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+        <a href="languages/hi.html" class="lang-card">
+          <span class="flag">🇮🇳</span>
+          <span class="lang-name">Hindi</span>
+          <span class="lang-native">हिन्दी</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+        <a href="languages/zh.html" class="lang-card">
+          <span class="flag">🇨🇳</span>
+          <span class="lang-name">Chinese</span>
+          <span class="lang-native">中文</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+        <a href="languages/es.html" class="lang-card">
+          <span class="flag">🇪🇸</span>
+          <span class="lang-name">Spanish</span>
+          <span class="lang-native">Español</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+        <a href="languages/it.html" class="lang-card">
+          <span class="flag">🇮🇹</span>
+          <span class="lang-name">Italian</span>
+          <span class="lang-native">Italiano</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+        <a href="languages/de.html" class="lang-card">
+          <span class="flag">🇩🇪</span>
+          <span class="lang-name">German</span>
+          <span class="lang-native">Deutsch</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+        <a href="languages/fr.html" class="lang-card">
+          <span class="flag">🇫🇷</span>
+          <span class="lang-name">French</span>
+          <span class="lang-native">Français</span>
+          <span class="ep-count">3 episodes</span>
+        </a>
+      </div>
+    </section>
 
-        <section class="about">
-            <h2 style="color:var(--moon-gold); text-align:center; margin-bottom:16px;">About Chandamama</h2>
-            <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
-            <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
-            <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
-            <div class="source-link">
-                <a href="https://archive.org/details/Chandamama_Sanskrit_1999" target="_blank" rel="noopener">
-                    📚 View Original Source on Archive.org
-                </a>
-            </div>
-        </section>
-    </main>
+    <!-- Cast -->
+    <section>
+      <h2>🎭 The Cast</h2>
+      <p class="section-desc">Meet the characters who bring these ancient tales to life. Each voice is unique.</p>
 
-    <footer>
-        <p>Made with 🌙 for children everywhere. Source: <a href="https://archive.org/details/Chandamama_Sanskrit_1999">Chandamama Sanskrit 1999</a> via Archive.org.</p>
-        <p>Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.</p>
-    </footer>
+      <div class="cast-grid">
+        <div class="cast-card">
+          <span class="cast-emoji">🌙</span>
+          <div class="cast-name">Uncle Moonbeam</div>
+          <div class="cast-role">Narrator & Host</div>
+        </div>
+        <div class="cast-card">
+          <span class="cast-emoji">🤴</span>
+          <div class="cast-name">King Vikramaditya</div>
+          <div class="cast-role">The Wise King</div>
+        </div>
+        <div class="cast-card">
+          <span class="cast-emoji">👸</span>
+          <div class="cast-name">Queen Ananya</div>
+          <div class="cast-role">The Curious Queen</div>
+        </div>
+        <div class="cast-card">
+          <span class="cast-emoji">📜</span>
+          <div class="cast-name">Minister Gopal</div>
+          <div class="cast-role">Royal Advisor</div>
+        </div>
+        <div class="cast-card">
+          <span class="cast-emoji">👧</span>
+          <div class="cast-name">Smita</div>
+          <div class="cast-role">The Brave Girl</div>
+        </div>
+        <div class="cast-card">
+          <span class="cast-emoji">🐰</span>
+          <div class="cast-name">Dr. Rabbit</div>
+          <div class="cast-role">The Wise Dentist</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section class="about">
+      <h2 style="color:var(--moon-gold); text-align:center; margin-bottom:20px;">About Chandamama</h2>
+      <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
+      <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
+      <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as enacted multi-cast podcasts with interactive transcripts, in 8 languages, for children everywhere.</p>
+      <div class="source-link">
+        <a href="https://archive.org/details/Chandamama_Sanskrit_1999" target="_blank" rel="noopener">📚 View Original Source on Archive.org</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Made with 🌙 for children everywhere. Source: <a href="https://archive.org/details/Chandamama_Sanskrit_1999">Chandamama Sanskrit 1999</a> via Archive.org.</p>
+    <p>Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.</p>
+  </footer>
+
+  <script src="assets/js/theater.js"></script>
+  <script src="assets/js/player.js"></script>
 </body>
 </html>
