@@ -523,7 +523,7 @@ Load any PDF via URL (with CORS proxy for external sites) or upload a local file
   }
 
   function showProxyHelp() {
-    alert("CORS Proxy Help:
+    alert(`CORS Proxy Help:
 
 Many sites (archive.org, Google Drive, etc.) block direct PDF loading from other websites.
 
@@ -534,7 +534,7 @@ To fix this:
    • https://api.allorigins.win/raw?url=
    • https://cors-anywhere.herokuapp.com/ (requires demo request)
 
-Or simply upload a PDF file from your device — no proxy needed!");
+Or simply upload a PDF file from your device — no proxy needed!`);
   }
 
   function handleFileUpload(e) {
@@ -608,12 +608,12 @@ Or simply upload a PDF file from your device — no proxy needed!");
     } catch (e) {
       if (e.message.includes("CORS") || e.message.includes("Failed to fetch")) {
         setStatus("🚫 CORS blocked! Enable proxy or upload file.", "error");
-        alert("CORS Error: This site blocks direct loading.
+        alert(`CORS Error: This site blocks direct loading.
 
 Solutions:
 1. Check "Use CORS Proxy" and try again
 2. Upload the PDF file directly from your device
-3. Host the PDF on the same domain (GitHub Pages)");
+3. Host the PDF on the same domain (GitHub Pages)`);
       } else {
         setStatus("❌ Error: " + e.message, "error");
       }
