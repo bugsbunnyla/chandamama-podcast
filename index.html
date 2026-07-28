@@ -596,9 +596,20 @@ Or simply upload a PDF file from your device — no proxy needed!`);
   async function loadPDF() {
     const rawUrl = document.getElementById("pdf-url").value.trim();
     if (!rawUrl) return alert("Please enter a PDF URL");
-    const url = getProxiedUrl(rawUrl);
+
+    const isExternal = !rawUrl.includes(location.hostname) && !rawUrl.startsWith("blob:") && !rawUrl.startsWith("data:");
+    const proxyWasEnabled = document.getElementById("use-proxy").checked;
+
+    if (isExternal && !proxyWasEnabled) {
+      document.getElementById("use-proxy").checked = true;
+      toggleProxy();
+      setStatus("🔀 Auto-enabled CORS proxy for external URL", "warn");
+    }
+
+    let url = getProxiedUrl(rawUrl);
     stop();
     setStatus("📄 Fetching PDF...", "warn");
+
     try {
       const resp = await fetch(url);
       if (!resp.ok) throw new Error("HTTP " + resp.status);
@@ -606,18 +617,15 @@ Or simply upload a PDF file from your device — no proxy needed!`);
       currentPdfData = data;
       await loadPdfFromData(data, rawUrl);
     } catch (e) {
-      if (e.message.includes("CORS") || e.message.includes("Failed to fetch")) {
-        setStatus("🚫 CORS blocked! Enable proxy or upload file.", "error");
-        alert(`CORS Error: This site blocks direct loading.
+      console.error("Fetch error:", e);
 
-Solutions:
-1. Check "Use CORS Proxy" and try again
-2. Upload the PDF file directly from your device
-3. Host the PDF on the same domain (GitHub Pages)`);
+      if (!proxyWasEnabled && isExternal) {
+        setStatus("🚫 Proxy retry failed. Try uploading the file.", "error");
+        alert("CORS Error: Both direct and proxy fetch failed.\n\nBest solutions:\n1. 📂 Upload the PDF file directly (no CORS issues)\n2. Host the PDF on your GitHub Pages repo\n3. Try a different proxy URL");
       } else {
         setStatus("❌ Error: " + e.message, "error");
+        alert("Error loading PDF: " + e.message + "\n\nTry uploading the file directly.");
       }
-      console.error(e);
     }
   }
 
