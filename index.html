@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chandamama Podcast Theater — PDF Audio-Visual Storyteller</title>
+<title>Chandamama Podcast Theater v7 — PDF Audio-Visual Storyteller</title>
 <style>
   :root {
     --bg: #0b0b14;
@@ -14,6 +14,8 @@
     --muted: #8a8a9e;
     --border: #252540;
     --stage-bg: radial-gradient(ellipse at 50% 80%, #1a1a35 0%, #0b0b14 70%);
+    --success: #2ecc71;
+    --warn: #f39c12;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow: hidden; }
@@ -21,34 +23,48 @@
 
   /* ===== TOP BAR ===== */
   #topbar {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px;
     padding: 10px 16px; background: var(--panel);
     border-bottom: 1px solid var(--border); flex-shrink: 0;
     flex-wrap: wrap;
   }
-  #topbar input[type="url"] {
-    flex: 1; min-width: 200px;
+  #topbar input[type="url"], #topbar input[type="text"] {
+    flex: 1; min-width: 180px;
     padding: 8px 14px; border-radius: 10px;
     border: 1px solid #333; background: #0a0a14;
-    color: var(--text); font-size: 14px; outline: none;
+    color: var(--text); font-size: 13px; outline: none;
   }
-  #topbar input[type="url"]:focus { border-color: var(--accent); }
+  #topbar input:focus { border-color: var(--accent); }
   #topbar button {
-    padding: 8px 18px; border-radius: 10px; border: none;
+    padding: 8px 16px; border-radius: 10px; border: none;
     background: var(--accent); color: #fff; font-weight: 600;
-    font-size: 13px; cursor: pointer; transition: all .2s;
+    font-size: 12px; cursor: pointer; transition: all .2s;
     white-space: nowrap;
   }
   #topbar button:hover { opacity: .85; transform: translateY(-1px); }
   #topbar button.secondary { background: var(--accent2); }
   #topbar button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
   #topbar button.ghost:hover { border-color: var(--accent); color: var(--text); }
+  #topbar button.success { background: var(--success); }
   #lang-select {
     padding: 8px 10px; border-radius: 10px;
     border: 1px solid #333; background: #0a0a14;
-    color: var(--text); font-size: 13px; outline: none;
+    color: var(--text); font-size: 12px; outline: none;
   }
   #status { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  #status.error { color: #ff6b6b; }
+  #status.success { color: var(--success); }
+  #status.warn { color: var(--warn); }
+
+  /* CORS Proxy row */
+  #cors-row {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 6px 0 0; flex-wrap: wrap;
+  }
+  #cors-row label { font-size: 11px; color: var(--muted); }
+  #cors-row input[type="checkbox"] { accent-color: var(--accent); }
+  #cors-row input[type="text"] { flex: 1; min-width: 200px; font-size: 12px; }
+  #cors-row .hint { font-size: 11px; color: var(--muted); }
 
   /* ===== MAIN STAGE ===== */
   #stage { flex: 1; display: flex; overflow: hidden; position: relative; background: var(--stage-bg); }
@@ -269,6 +285,17 @@
   #toggle-pdf { left: 0; border-radius: 0 8px 8px 0; border-left: none; }
   #toggle-ctrl { right: 0; border-radius: 8px 0 0 8px; border-right: none; }
 
+  /* Drop Zone */
+  #drop-zone {
+    position: fixed; inset: 0; background: rgba(11,11,20,.92);
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; z-index: 100; border: 3px dashed var(--accent);
+  }
+  #drop-zone.active { display: flex; }
+  #drop-zone .icon { font-size: 64px; margin-bottom: 16px; }
+  #drop-zone p { font-size: 18px; color: var(--text); }
+  #drop-zone .sub { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
   /* Animations */
   @keyframes pulse-glow {
     0%,100% { box-shadow: 0 0 0 0 rgba(233,69,96,.4); }
@@ -295,12 +322,21 @@
 </head>
 <body>
 
+<!-- Drop Zone Overlay -->
+<div id="drop-zone">
+  <div class="icon">📁</div>
+  <p>Drop PDF file here</p>
+  <div class="sub">or click "📂 Upload" in the top bar</div>
+</div>
+
 <div id="app">
   <!-- TOP BAR -->
   <div id="topbar">
     <input type="url" id="pdf-url" placeholder="Paste PDF URL here..." value="https://bugsbunnyla.github.io/chandamama-podcast/sample.pdf">
-    <button onclick="loadPDF()">📄 Load PDF</button>
-    <button class="secondary" onclick="extractImages()">🖼 Extract Images</button>
+    <button onclick="loadPDF()">📄 Load URL</button>
+    <button class="success" onclick="document.getElementById('file-input').click()">📂 Upload</button>
+    <input type="file" id="file-input" accept=".pdf" style="display:none" onchange="handleFileUpload(event)">
+    <button class="secondary" onclick="extractImages()">🖼 Extract</button>
     <button class="ghost" onclick="downloadScript()">⬇ Script</button>
     <select id="lang-select" onchange="updateVoices()">
       <option value="en-US">🇺🇸 English (US)</option>
@@ -327,6 +363,13 @@
     <span id="status">🎭 Ready — Load a PDF to begin</span>
   </div>
 
+  <!-- CORS PROXY ROW -->
+  <div id="cors-row" style="padding:0 16px 8px;background:var(--panel);border-bottom:1px solid var(--border);">
+    <label><input type="checkbox" id="use-proxy" onchange="toggleProxy()"> Use CORS Proxy</label>
+    <input type="text" id="proxy-url" placeholder="https://corsproxy.io/?" value="https://corsproxy.io/?" disabled style="opacity:.5;">
+    <span class="hint">Enable for external URLs (archive.org, etc.) · <a href="#" onclick="showProxyHelp()" style="color:var(--accent);">Help</a></span>
+  </div>
+
   <!-- MAIN STAGE -->
   <div id="stage">
     <!-- LEFT: PDF Pages -->
@@ -349,9 +392,7 @@
 
       <!-- Dialogue Box -->
       <div id="dialogue-box">
-        <div id="dialogue-text">Welcome to Chandamama Podcast Theater.
-
-Paste a PDF URL above and click "Load PDF" to turn any story into an immersive audio-visual experience with character voices, portraits, and stage lighting.</div>
+        <div id="dialogue-text">Welcome to Chandamama Podcast Theater v7.\n\nLoad any PDF via URL (with CORS proxy for external sites) or upload a local file. The app turns stories into immersive audio-visual experiences with character voices, portraits, and stage lighting.</div>
         <div id="dialogue-meta">
           <span id="speaker-name">— Narrator</span>
           <span id="page-indicator">Page 0 / 0</span>
@@ -364,9 +405,9 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
     <div id="controls-panel">
       <!-- Playback -->
       <div class="panel-section" id="playback">
-        <button class="secondary" onclick="prevLine()" title="Previous (◀)">⏮</button>
+        <button class="secondary" onclick="prevLine()" title="Previous (←)">⏮</button>
         <button id="play-btn" onclick="togglePlay()" title="Play/Pause (Space)">▶</button>
-        <button class="secondary" onclick="nextLine()" title="Next (▶)">⏭</button>
+        <button class="secondary" onclick="nextLine()" title="Next (→)">⏭</button>
         <div id="progress-wrap" onclick="seek(event)"><div id="progress-bar"></div></div>
       </div>
 
@@ -434,10 +475,10 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
   let characterMap = {};
   let autoAdvanceTimer = null;
   let totalDurationEstimate = 0;
+  let currentPdfData = null; // ArrayBuffer for uploaded files
 
   // ==================== ARCHETYPES ====================
   const ARCHETYPES = {
-    // Animals
     lion:      { type: "animal", gender: "male",   age: "adult",    icon: "🦁" },
     tiger:     { type: "animal", gender: "male",   age: "adult",    icon: "🐯" },
     bear:      { type: "animal", gender: "male",   age: "adult",    icon: "🐻" },
@@ -458,7 +499,6 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
     frog:      { type: "animal", gender: "neutral",age: "adult",    icon: "🐸" },
     wolf:      { type: "animal", gender: "male",   age: "adult",    icon: "🐺" },
     horse:     { type: "animal", gender: "neutral",age: "adult",    icon: "🐴" },
-    // Humans
     king:      { type: "human",  gender: "male",   age: "adult",    role: "captain", icon: "👑" },
     queen:     { type: "human",  gender: "female", age: "adult",    role: "captain", icon: "👸" },
     prince:    { type: "human",  gender: "male",   age: "boy",      icon: "🤴" },
@@ -499,16 +539,50 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
   initVoices();
   setTimeout(initVoices, 800);
 
-  function setStatus(msg) { document.getElementById("status").textContent = msg; }
+  function setStatus(msg, type) {
+    const el = document.getElementById("status");
+    el.textContent = msg;
+    el.className = type || "";
+  }
 
-  // ==================== PDF LOADING ====================
-  async function loadPDF() {
-    const url = document.getElementById("pdf-url").value.trim();
-    if (!url) return alert("Please enter a PDF URL");
-    setStatus("📄 Loading PDF...");
+  // ==================== CORS PROXY ====================
+  function toggleProxy() {
+    const enabled = document.getElementById("use-proxy").checked;
+    const input = document.getElementById("proxy-url");
+    input.disabled = !enabled;
+    input.style.opacity = enabled ? "1" : ".5";
+  }
+
+  function getProxiedUrl(url) {
+    if (!document.getElementById("use-proxy").checked) return url;
+    const proxy = document.getElementById("proxy-url").value.trim();
+    if (!proxy) return url;
+    return proxy + encodeURIComponent(url);
+  }
+
+  function showProxyHelp() {
+    alert("CORS Proxy Help:\n\nMany sites (archive.org, Google Drive, etc.) block direct PDF loading from other websites.\n\nTo fix this:\n1. Check "Use CORS Proxy"\n2. Try these free proxies:\n   • https://corsproxy.io/?\n   • https://api.allorigins.win/raw?url=\n   • https://cors-anywhere.herokuapp.com/ (requires demo request)\n\nOr simply upload a PDF file from your device — no proxy needed!");
+  }
+
+  // ==================== FILE UPLOAD ====================
+  function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setStatus("📂 Reading file...", "warn");
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      currentPdfData = ev.target.result;
+      await loadPdfFromData(currentPdfData, file.name);
+    };
+    reader.onerror = () => setStatus("❌ Failed to read file", "error");
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function loadPdfFromData(data, sourceName) {
     stop();
+    setStatus("📄 Parsing PDF...", "warn");
     try {
-      pdfDoc = await pdfjsLib.getDocument({ url, useSystemFonts: true }).promise;
+      pdfDoc = await pdfjsLib.getDocument({ data }).promise;
       pages = [];
       document.getElementById("pdf-pages").innerHTML = "";
       document.getElementById("page-count").textContent = pdfDoc.numPages;
@@ -538,14 +612,36 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
       }
 
       parseStory();
-      setStatus(`✅ Loaded ${pdfDoc.numPages} pages · ${storyLines.length} lines · ${Object.keys(characterMap).length} characters`);
-      if (storyLines.length > 0) {
-        currentLine = 0;
-        renderLine();
-      }
+      setStatus(`✅ Loaded "${sourceName}" · ${pdfDoc.numPages} pages · ${storyLines.length} lines · ${Object.keys(characterMap).length} chars`, "success");
+      if (storyLines.length > 0) { currentLine = 0; renderLine(); }
       updateStats();
     } catch (e) {
-      setStatus("❌ Error: " + e.message);
+      setStatus("❌ Error: " + e.message, "error");
+      console.error(e);
+    }
+  }
+
+  // ==================== PDF URL LOADING ====================
+  async function loadPDF() {
+    const rawUrl = document.getElementById("pdf-url").value.trim();
+    if (!rawUrl) return alert("Please enter a PDF URL");
+    const url = getProxiedUrl(rawUrl);
+    stop();
+    setStatus("📄 Fetching PDF...", "warn");
+    try {
+      // Try fetch first to catch CORS errors with better messaging
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.arrayBuffer();
+      currentPdfData = data;
+      await loadPdfFromData(data, rawUrl);
+    } catch (e) {
+      if (e.message.includes("CORS") || e.message.includes("Failed to fetch")) {
+        setStatus("🚫 CORS blocked! Enable proxy or upload file.", "error");
+        alert("CORS Error: This site blocks direct loading.\n\nSolutions:\n1. Check "Use CORS Proxy" and try again\n2. Upload the PDF file directly from your device\n3. Host the PDF on the same domain (GitHub Pages)");
+      } else {
+        setStatus("❌ Error: " + e.message, "error");
+      }
       console.error(e);
     }
   }
@@ -631,7 +727,7 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
   // ==================== IMAGE EXTRACTION ====================
   async function extractImages() {
     if (!pdfDoc) return alert("Load a PDF first");
-    setStatus("🖼 Extracting images...");
+    setStatus("🖼 Extracting images...", "warn");
     extractedImagesList = [];
     const container = document.getElementById("extracted-images");
     container.innerHTML = "";
@@ -655,7 +751,6 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
       }
     }
 
-    // Fallback: page renders
     for (let i = 0; i < pages.length; i++) {
       const p = pages[i];
       extractedImagesList.push({ url: p.canvas, page: p.page, name: "page-render" });
@@ -665,7 +760,7 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
     autoAssignImages();
     renderCharacterStrip();
     updateStats();
-    setStatus(`✅ Extracted ${extractedImagesList.length} images`);
+    setStatus(`✅ Extracted ${extractedImagesList.length} images`, "success");
   }
 
   function appendExtractedImage(url, page, name) {
@@ -708,7 +803,6 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
       const div = document.createElement("div");
       div.className = "character";
       div.id = `char-${char.name.replace(/\s/g, "_")}`;
-      div.onclick = () => { /* future: show character details */ };
       const img = document.createElement("img");
       img.src = char.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(char.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
       img.alt = char.name;
@@ -745,7 +839,6 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
       spotlight.style.left = (rect.left - stage.left + rect.width / 2 - 160) + "px";
       spotlight.style.top = (rect.top - stage.top + rect.height / 2 - 160) + "px";
     } else {
-      // Narrator spotlight on dialogue box
       const box = document.getElementById("dialogue-box").getBoundingClientRect();
       const stage = document.getElementById("theater").getBoundingClientRect();
       const spotlight = document.getElementById("spotlight");
@@ -774,7 +867,6 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
     if (candidates.length === 0) candidates = voices;
     if (char && char.archetype) {
       const gender = char.archetype.gender;
-      const age = char.archetype.age;
       let filtered = candidates.filter(v => {
         const n = v.name.toLowerCase();
         if (gender === "female") return /female|woman|girl|samantha|victoria|zira|veena|lekha|swara/i.test(n);
@@ -782,7 +874,6 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
         return true;
       });
       if (filtered.length > 0) candidates = filtered;
-      // Age-based pitch hint (stored on utterance later)
     }
     return candidates[0] || voices[0];
   }
@@ -905,6 +996,21 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
     document.getElementById(id).classList.toggle("collapsed");
   }
 
+  // ==================== DRAG & DROP ====================
+  const dropZone = document.getElementById("drop-zone");
+  window.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("active"); });
+  window.addEventListener("dragleave", e => { if (e.relatedTarget === null) dropZone.classList.remove("active"); });
+  window.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("active");
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "application/pdf") {
+      const reader = new FileReader();
+      reader.onload = ev => { currentPdfData = ev.target.result; loadPdfFromData(currentPdfData, file.name); };
+      reader.readAsArrayBuffer(file);
+    }
+  });
+
   // ==================== DOWNLOAD SCRIPT ====================
   function downloadScript() {
     if (storyLines.length === 0) return alert("No story loaded.");
@@ -924,7 +1030,7 @@ Paste a PDF URL above and click "Load PDF" to turn any story into an immersive a
 
   // ==================== KEYBOARD SHORTCUTS ====================
   document.addEventListener("keydown", e => {
-    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
     if (e.code === "Space") { e.preventDefault(); togglePlay(); }
     if (e.code === "ArrowRight") { e.preventDefault(); nextLine(); if (isPlaying) { window.speechSynthesis.cancel(); speakCurrentLine(); } }
     if (e.code === "ArrowLeft") { e.preventDefault(); prevLine(); if (isPlaying) { window.speechSynthesis.cancel(); speakCurrentLine(); } }
