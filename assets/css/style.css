@@ -453,6 +453,84 @@ footer a { color: var(--moon-gold); text-decoration: none; }
 .processing-text { color: var(--moon-gold); font-size: 1.1rem; font-weight: 700; }
 .processing-sub { color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 8px; }
 
+
+/* Recording */
+.recording-indicator {
+  position: absolute; top: 14px; left: 14px;
+  background: rgba(231, 76, 60, 0.9); color: #fff;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 0.8rem; font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
+  z-index: 10; animation: pulse-rec 1.5s ease-in-out infinite;
+}
+@keyframes pulse-rec {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.rec-dot {
+  width: 10px; height: 10px; background: #fff;
+  border-radius: 50%; animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.rec-btn.recording { color: #e74c3c !important; animation: pulse-rec 1.5s infinite; }
+
+.reel-badge {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(142,68,173,0.9), rgba(155,89,182,0.9));
+  color: #fff; padding: 6px 18px; border-radius: 20px;
+  font-size: 0.82rem; font-weight: 700; z-index: 10;
+}
+
+/* Download Panel */
+.download-panel {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--card-bg); border-radius: var(--radius);
+  padding: 28px; width: 90%; max-width: 500px;
+  box-shadow: var(--shadow); z-index: 20;
+  display: none; animation: slideUp 0.3s ease;
+}
+.download-panel.active { display: block; }
+@keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+.download-panel h4 { color: var(--text-dark); margin-bottom: 8px; font-size: 1.1rem; }
+.download-desc { color: var(--text-light); font-size: 0.88rem; margin-bottom: 16px; }
+.download-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+.btn-download-audio {
+  background: linear-gradient(135deg, var(--accent-saffron), #e67e22);
+  color: #fff; border: none; padding: 12px 20px;
+  border-radius: 24px; font-weight: 700; cursor: pointer;
+  transition: var(--transition); font-size: 0.9rem;
+}
+.btn-download-audio:hover { transform: scale(1.03); box-shadow: 0 4px 12px rgba(230,126,34,0.3); }
+.btn-download-audio.secondary {
+  background: transparent; color: var(--text-dark);
+  border: 2px solid #ddd;
+}
+.btn-download-audio.secondary:hover { border-color: var(--accent-saffron); color: var(--accent-saffron); }
+
+.character-reel-section { border-top: 1px solid #eee; padding-top: 16px; }
+.character-reel-section h5 { color: var(--text-dark); margin-bottom: 6px; font-size: 0.95rem; }
+.reel-desc { color: var(--text-light); font-size: 0.85rem; margin-bottom: 10px; }
+.reel-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.reel-char-btn {
+  background: #f0f0f0; border: 2px solid transparent;
+  padding: 8px 14px; border-radius: 20px;
+  font-size: 0.85rem; cursor: pointer; transition: var(--transition);
+  display: flex; align-items: center; gap: 6px; color: var(--text-dark);
+}
+.reel-char-btn:hover { background: rgba(244,208,63,0.15); border-color: var(--moon-gold); transform: translateY(-2px); }
+.reel-count { font-size: 0.75rem; color: var(--text-light); margin-left: 4px; }
+
+.download-close {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; font-size: 1.1rem;
+  cursor: pointer; color: var(--text-light); width: 32px; height: 32px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.download-close:hover { background: #f0f0f0; color: var(--text-dark); }
+
 /* Responsive */
 @media (max-width: 700px) {
   .episode-card { grid-template-columns: 1fr; }
