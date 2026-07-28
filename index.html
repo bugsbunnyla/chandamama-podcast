@@ -1,184 +1,934 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chandamama Moonlight Stories — Free Children's Podcast</title>
-  <meta name="description" content="Ancient Sanskrit tales retold as enacted multi-cast podcasts in 8 languages for children everywhere.">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chandamama Podcast Theater — PDF Audio-Visual Storyteller</title>
+<style>
+  :root {
+    --bg: #0b0b14;
+    --panel: #131325;
+    --accent: #e94560;
+    --accent2: #0f3460;
+    --text: #eaeaea;
+    --muted: #8a8a9e;
+    --border: #252540;
+    --stage-bg: radial-gradient(ellipse at 50% 80%, #1a1a35 0%, #0b0b14 70%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow: hidden; }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ===== TOP BAR ===== */
+  #topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; background: var(--panel);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  #topbar input[type="url"] {
+    flex: 1; min-width: 200px;
+    padding: 8px 14px; border-radius: 10px;
+    border: 1px solid #333; background: #0a0a14;
+    color: var(--text); font-size: 14px; outline: none;
+  }
+  #topbar input[type="url"]:focus { border-color: var(--accent); }
+  #topbar button {
+    padding: 8px 18px; border-radius: 10px; border: none;
+    background: var(--accent); color: #fff; font-weight: 600;
+    font-size: 13px; cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+  }
+  #topbar button:hover { opacity: .85; transform: translateY(-1px); }
+  #topbar button.secondary { background: var(--accent2); }
+  #topbar button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  #topbar button.ghost:hover { border-color: var(--accent); color: var(--text); }
+  #lang-select {
+    padding: 8px 10px; border-radius: 10px;
+    border: 1px solid #333; background: #0a0a14;
+    color: var(--text); font-size: 13px; outline: none;
+  }
+  #status { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* ===== MAIN STAGE ===== */
+  #stage { flex: 1; display: flex; overflow: hidden; position: relative; background: var(--stage-bg); }
+
+  /* ===== LEFT: PDF PANEL ===== */
+  #pdf-panel {
+    width: 260px; min-width: 200px; background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: width .3s ease, min-width .3s ease;
+  }
+  #pdf-panel.collapsed { width: 0; min-width: 0; border: none; }
+  #pdf-header {
+    padding: 10px 14px; font-size: 12px; font-weight: 700;
+    color: var(--muted); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  #pdf-pages {
+    flex: 1; overflow-y: auto; padding: 10px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .page-thumb {
+    width: 100%; aspect-ratio: 3/4; background: #0a0a14;
+    border-radius: 10px; border: 2px solid transparent;
+    cursor: pointer; overflow: hidden; position: relative;
+    transition: border-color .2s, transform .2s;
+  }
+  .page-thumb:hover { transform: scale(1.02); }
+  .page-thumb.active { border-color: var(--accent); }
+  .page-thumb canvas { width: 100%; height: 100%; object-fit: contain; }
+  .page-num {
+    position: absolute; bottom: 4px; right: 6px;
+    background: rgba(0,0,0,.7); color: #fff;
+    font-size: 10px; padding: 2px 7px; border-radius: 5px;
+  }
+
+  /* ===== CENTER: THEATER ===== */
+  #theater {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end;
+    padding: 24px; position: relative; overflow: hidden;
+  }
+  #curtain {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,.5) 100%);
+    pointer-events: none; z-index: 0;
+  }
+  #spotlight {
+    position: absolute; width: 320px; height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.06) 0%, transparent 70%);
+    filter: blur(24px); pointer-events: none;
+    transition: all .6s cubic-bezier(.25,.8,.25,1);
+    z-index: 1;
+  }
+
+  /* Character Strip */
+  #character-strip {
+    display: flex; gap: 24px; align-items: flex-end;
+    justify-content: center; width: 100%;
+    max-width: 960px; margin-bottom: 24px;
+    z-index: 2; min-height: 160px; flex-wrap: wrap;
+  }
+  .character {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px; transition: all .4s cubic-bezier(.34,1.56,.64,1);
+    opacity: .35; transform: scale(.82);
+    cursor: pointer;
+  }
+  .character:hover { opacity: .7; }
+  .character.active {
+    opacity: 1; transform: scale(1.12);
+    filter: drop-shadow(0 0 24px rgba(233,69,96,.35));
+  }
+  .character img {
+    width: 96px; height: 96px; border-radius: 50%;
+    object-fit: cover; border: 3px solid var(--accent2);
+    background: #0a0a14; transition: border-color .3s;
+  }
+  .character.active img { border-color: var(--accent); }
+  .character .label {
+    font-size: 12px; color: var(--muted); text-align: center;
+    max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .character.active .label { color: var(--accent); font-weight: 700; }
+  .character .type-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    background: var(--accent2); color: #fff;
+  }
+
+  /* Dialogue Box */
+  #dialogue-box {
+    width: 100%; max-width: 820px;
+    background: rgba(19,19,37,.88); backdrop-filter: blur(16px);
+    border-radius: 18px; padding: 22px 30px;
+    border: 1px solid rgba(255,255,255,.06);
+    z-index: 2; margin-bottom: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  }
+  #dialogue-text {
+    font-size: 19px; line-height: 1.65; min-height: 60px;
+    color: var(--text);
+  }
+  #dialogue-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.06);
+  }
+  #speaker-name { font-size: 14px; font-weight: 700; color: var(--accent); }
+  #page-indicator { font-size: 12px; color: var(--muted); }
+
+  /* ===== RIGHT: CONTROLS ===== */
+  #controls-panel {
+    width: 300px; min-width: 260px; background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: width .3s ease, min-width .3s ease;
+  }
+  #controls-panel.collapsed { width: 0; min-width: 0; border: none; }
+  .panel-section { padding: 14px; border-bottom: 1px solid var(--border); }
+  .panel-section h3 {
+    margin: 0 0 10px; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Playback */
+  #playback {
+    display: flex; align-items: center; gap: 10px;
+    justify-content: center; padding: 12px;
+  }
+  #playback button {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: none; background: var(--accent); color: #fff;
+    font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .1s, box-shadow .2s;
+    box-shadow: 0 4px 12px rgba(233,69,96,.3);
+  }
+  #playback button:hover { transform: scale(1.05); }
+  #playback button:active { transform: scale(.92); }
+  #playback button.secondary {
+    background: var(--accent2); width: 38px; height: 38px;
+    font-size: 14px; box-shadow: none;
+  }
+  #progress-wrap {
+    flex: 1; height: 6px; background: #0a0a14;
+    border-radius: 3px; overflow: hidden; cursor: pointer;
+    position: relative;
+  }
+  #progress-bar {
+    height: 100%; width: 0%; background: var(--accent);
+    border-radius: 3px; transition: width .2s;
+  }
+
+  /* Voice Settings */
+  .voice-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .voice-row label {
+    font-size: 12px; width: 80px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .voice-row select {
+    flex: 1; padding: 6px 8px; border-radius: 8px;
+    border: 1px solid #333; background: #0a0a14;
+    color: var(--text); font-size: 12px; outline: none;
+  }
+  .voice-row select:focus { border-color: var(--accent); }
+
+  /* Extracted Images */
+  #extracted-images {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 6px; max-height: 220px; overflow-y: auto;
+  }
+  .ext-img {
+    aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+    cursor: pointer; border: 2px solid transparent;
+    position: relative; background: #0a0a14;
+    transition: border-color .2s, transform .2s;
+  }
+  .ext-img:hover { border-color: var(--accent); transform: scale(1.03); }
+  .ext-img img { width: 100%; height: 100%; object-fit: cover; }
+  .ext-img .img-tag {
+    position: absolute; bottom: 2px; left: 2px;
+    font-size: 9px; background: rgba(0,0,0,.75);
+    color: #fff; padding: 1px 5px; border-radius: 4px;
+  }
+
+  /* Settings Sliders */
+  .slider-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .slider-row label {
+    font-size: 12px; width: 50px; color: var(--muted);
+  }
+  .slider-row input[type="range"] {
+    flex: 1; accent-color: var(--accent);
+  }
+  .slider-row .val {
+    font-size: 11px; color: var(--muted); width: 30px; text-align: right;
+  }
+
+  /* Sidebar Toggles */
+  .sidebar-toggle {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 22px; height: 56px; background: var(--panel);
+    border: 1px solid var(--border); display: flex;
+    align-items: center; justify-content: center;
+    cursor: pointer; z-index: 10; font-size: 11px;
+    color: var(--muted); transition: color .2s;
+    user-select: none;
+  }
+  .sidebar-toggle:hover { color: var(--accent); }
+  #toggle-pdf { left: 0; border-radius: 0 8px 8px 0; border-left: none; }
+  #toggle-ctrl { right: 0; border-radius: 8px 0 0 8px; border-right: none; }
+
+  /* Animations */
+  @keyframes pulse-glow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(233,69,96,.4); }
+    50% { box-shadow: 0 0 20px 10px rgba(233,69,96,.08); }
+  }
+  .speaking { animation: pulse-glow 1.5s infinite; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    #pdf-panel, #controls-panel { position: absolute; z-index: 20; height: 100%; }
+    #pdf-panel { left: 0; }
+    #controls-panel { right: 0; }
+    #character-strip { gap: 12px; }
+    .character img { width: 64px; height: 64px; }
+    #dialogue-text { font-size: 16px; }
+  }
+</style>
+<base target="_blank">
 </head>
 <body>
-  <div class="stars-bg"></div>
-  <div class="shooting-star" style="animation-delay: 0s;"></div>
-  <div class="shooting-star" style="animation-delay: 4s; top: 35%;"></div>
-  <div class="shooting-star" style="animation-delay: 7s; top: 55%;"></div>
 
-  <header class="hero">
-    <div class="moon">
-      <div class="moon-face">🌙</div>
-      <div class="moon-glow"></div>
-    </div>
-    <h1>Chandamama</h1>
-    <p class="subtitle">Moonlight Stories for Little Travelers</p>
-    <p class="tagline">Ancient Sanskrit tales, brought to life by a cast of characters. Record episodes, download character reels, and listen anywhere — completely free, in 8 languages, forever.</p>
-    <div class="hero-badges">
-      <span class="badge">🎭 Multi-Cast Theater</span>
-      <span class="badge">🎧 3 Episodes</span>
-      <span class="badge">🌍 8 Languages</span>
-      <span class="badge">⏺️ Record & Download</span>
-      <span class="badge">🎭 Character Reels</span>
-      <span class="badge">📖 Interactive Transcripts</span>
-    </div>
-  </header>
-
-  
-    <!-- Auto-Process PDF -->
-    <section style="background: linear-gradient(135deg, rgba(244,208,63,0.08), rgba(19,136,8,0.05)); border: 2px dashed rgba(244,208,63,0.3); border-radius: var(--radius); padding: 32px; text-align: center;">
-      <h2 style="color: var(--moon-gold); margin-bottom: 10px;">📄 Auto-Process Any PDF</h2>
-      <p style="color: rgba(255,255,255,0.65); max-width: 600px; margin: 0 auto 20px; line-height: 1.6;">
-        Paste a PDF URL and the app will extract, parse, and dramatize it instantly — right in your browser. No server needed.
-      </p>
-      <div style="display: flex; gap: 10px; max-width: 700px; margin: 0 auto; flex-wrap: wrap; justify-content: center;">
-        <input type="text" id="pdfUrlInput" placeholder="Paste PDF URL here..." 
-          value="https://ia902802.us.archive.org/10/items/Chandamama_Sanskrit_1999/1999December.pdf"
-          style="flex: 1; min-width: 280px; padding: 14px 18px; border-radius: 28px; border: 2px solid rgba(255,255,255,0.15); 
-                 background: rgba(0,0,0,0.3); color: #fff; font-size: 0.95rem; font-family: inherit; outline: none;">
-        <button onclick="processPDF()" class="btn-primary" id="processBtn" style="border: none;">
-          🚀 Process & Play
-        </button>
-      </div>
-      <div class="status-msg info show" id="pdfStatus" style="margin-top: 16px; display: none;">
-        Ready to process. Click the button above.
-      </div>
-      <p style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 14px;">
-        Works with any PDF URL. For Archive.org links, use the direct download URL.
-        <br>Processing happens entirely in your browser — no data leaves your device.
-      </p>
-    </section>
-
-  <main>
-    <section>
-      <h2>🌟 Featured Episode</h2>
-      <p class="section-desc">Step into the theater. Each character speaks in their own voice.</p>
-      <div class="featured-episode">
-        <div class="featured-header">
-          <span class="featured-art">👑</span>
-          <div class="featured-meta">
-            <h3>The King and the Queen — The Lamp of Dharma</h3>
-            <p>Episode 1 · 22 min · Ages 7–12 · 6 Characters · 5 Scenes</p>
-          </div>
-        </div>
-        <p style="color: rgba(255,255,255,0.7); line-height: 1.7;">
-          King Vikramaditya sees a mysterious golden light beyond the seven hills. Is it the legendary Lamp of Dharma? 
-          Join the King, Queen Ananya, Minister Gopal, Captain Veer, and the Old Sage in this royal mystery 
-          enacted by a full cast of voices with scene-changing backgrounds.
-        </p>
-        <div class="featured-actions">
-          <a href="languages/en.html" class="btn-primary">🎭 Enter Theater</a>
-          <a href="languages/en.html#ep01" class="btn-secondary">📖 Read Transcript</a>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Choose Your Language</h2>
-      <p class="section-desc">Every story is adapted by native speakers. Select a language to explore episodes.</p>
-      <div class="grid">
-        <a href="languages/en.html" class="lang-card"><span class="flag">🇬🇧</span><span class="lang-name">English</span><span class="lang-native">English</span><span class="ep-count">3 episodes</span></a>
-        <a href="languages/te.html" class="lang-card"><span class="flag">🇮🇳</span><span class="lang-name">Telugu</span><span class="lang-native">తెలుగు</span><span class="ep-count">3 episodes</span></a>
-        <a href="languages/hi.html" class="lang-card"><span class="flag">🇮🇳</span><span class="lang-name">Hindi</span><span class="lang-native">हिन्दी</span><span class="ep-count">3 episodes</span></a>
-        <a href="languages/zh.html" class="lang-card"><span class="flag">🇨🇳</span><span class="lang-name">Chinese</span><span class="lang-native">中文</span><span class="ep-count">3 episodes</span></a>
-        <a href="languages/es.html" class="lang-card"><span class="flag">🇪🇸</span><span class="lang-name">Spanish</span><span class="lang-native">Español</span><span class="ep-count">3 episodes</span></a>
-        <a href="languages/it.html" class="lang-card"><span class="flag">🇮🇹</span><span class="lang-name">Italian</span><span class="lang-native">Italiano</span><span class="ep-count">3 episodes</span></a>
-        <a href="languages/de.html" class="lang-card"><span class="flag">🇩🇪</span><span class="lang-name">German</span><span class="lang-native">Deutsch</span><span class="ep-count">3 episodes</span></a>
-        <a href="languages/fr.html" class="lang-card"><span class="flag">🇫🇷</span><span class="lang-name">French</span><span class="lang-native">Français</span><span class="ep-count">3 episodes</span></a>
-      </div>
-    </section>
-
-    <section>
-      <h2>🎭 The Cast</h2>
-      <p class="section-desc">Meet the characters who bring these ancient tales to life.</p>
-      <div class="cast-grid">
-        <div class="cast-card"><span class="cast-emoji">🌙</span><div class="cast-name">Uncle Moonbeam</div><div class="cast-role">Narrator & Host</div></div>
-        <div class="cast-card"><span class="cast-emoji">🤴</span><div class="cast-name">King Vikramaditya</div><div class="cast-role">The Wise King</div></div>
-        <div class="cast-card"><span class="cast-emoji">👸</span><div class="cast-name">Queen Ananya</div><div class="cast-role">The Curious Queen</div></div>
-        <div class="cast-card"><span class="cast-emoji">📜</span><div class="cast-name">Minister Gopal</div><div class="cast-role">Royal Advisor</div></div>
-        <div class="cast-card"><span class="cast-emoji">⚔️</span><div class="cast-name">Captain Veer</div><div class="cast-role">Head of the Guard</div></div>
-        <div class="cast-card"><span class="cast-emoji">🧙</span><div class="cast-name">Old Sage</div><div class="cast-role">Forest Hermit</div></div>
-        <div class="cast-card"><span class="cast-emoji">👧</span><div class="cast-name">Smita</div><div class="cast-role">The Brave Girl</div></div>
-        <div class="cast-card"><span class="cast-emoji">🐰</span><div class="cast-name">Dr. Rabbit</div><div class="cast-role">The Wise Dentist</div></div>
-      </div>
-    </section>
-
-    <section class="about">
-      <h2 style="color:var(--moon-gold); text-align:center; margin-bottom:18px;">About Chandamama</h2>
-      <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
-      <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
-      <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as enacted multi-cast podcasts with interactive transcripts, in 8 languages, for children everywhere.</p>
-      <div class="source-link">
-        <a href="https://archive.org/details/Chandamama_Sanskrit_1999" target="_blank" rel="noopener">📚 View Original Source on Archive.org</a>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <p>Made with 🌙 for children everywhere. Source: <a href="https://archive.org/details/Chandamama_Sanskrit_1999">Chandamama Sanskrit 1999</a> via Archive.org.</p>
-    <p>Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.</p>
-  </footer>
-
-  <script src="assets/js/theater.js"></script>
-  <script src="assets/js/player.js"></script>
-  <script src="assets/js/pdf-processor.js"></script>
-  <script>
-    function showProcessing(text, sub) {
-      document.getElementById("processingText").textContent = text || "Processing...";
-      document.getElementById("processingSub").textContent = sub || "";
-      document.getElementById("processingOverlay").classList.add("active");
-    }
-    function hideProcessing() {
-      document.getElementById("processingOverlay").classList.remove("active");
-    }
-
-    // Hook into PDF processor status updates
-    const origUpdate = PDFAutoProcessor.prototype.updateStatus;
-    PDFAutoProcessor.prototype.updateStatus = function(msg, type) {
-      origUpdate.call(this, msg, type);
-      const overlayText = document.getElementById("processingText");
-      if (overlayText && document.getElementById("processingOverlay").classList.contains("active")) {
-        overlayText.textContent = msg;
-      }
-    };
-
-    async function processPDF() {
-      const url = document.getElementById("pdfUrlInput").value.trim();
-      if (!url) { alert("Please paste a PDF URL"); return; }
-
-      showProcessing("Loading PDF...", url.substring(0, 60) + "...");
-
-      try {
-        const story = await window.pdfProcessor.process(url);
-        hideProcessing();
-        if (story && story.episodes.length > 0) {
-          window.theater.story = story;
-          window.theater.startEpisode(story.episodes[0].id);
-        }
-      } catch (e) {
-        hideProcessing();
-        console.error(e);
-        document.getElementById("pdfStatus").textContent = 
-          "❌ Failed: " + (e.message || "Could not process PDF. The server may block CORS. Try: (1) Download the PDF to your computer, (2) Upload to Google Drive and get a direct link, or (3) Use a CORS proxy.");
-        document.getElementById("pdfStatus").className = "status-msg show err";
-      }
-    }
-  </script>
-
-  <!-- Processing Overlay -->
-  <div class="processing-overlay" id="processingOverlay">
-    <div class="processing-spinner"></div>
-    <div class="processing-text" id="processingText">Loading PDF...</div>
-    <div class="processing-sub" id="processingSub">This happens in your browser</div>
+<div id="app">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <input type="url" id="pdf-url" placeholder="Paste PDF URL here..." value="https://bugsbunnyla.github.io/chandamama-podcast/sample.pdf">
+    <button onclick="loadPDF()">📄 Load PDF</button>
+    <button class="secondary" onclick="extractImages()">🖼 Extract Images</button>
+    <button class="ghost" onclick="downloadScript()">⬇ Script</button>
+    <select id="lang-select" onchange="updateVoices()">
+      <option value="en-US">🇺🇸 English (US)</option>
+      <option value="en-GB">🇬🇧 English (UK)</option>
+      <option value="hi-IN">🇮🇳 Hindi</option>
+      <option value="ta-IN">🇮🇳 Tamil</option>
+      <option value="te-IN">🇮🇳 Telugu</option>
+      <option value="kn-IN">🇮🇳 Kannada</option>
+      <option value="ml-IN">🇮🇳 Malayalam</option>
+      <option value="bn-IN">🇮🇳 Bengali</option>
+      <option value="gu-IN">🇮🇳 Gujarati</option>
+      <option value="mr-IN">🇮🇳 Marathi</option>
+      <option value="es-ES">🇪🇸 Spanish</option>
+      <option value="fr-FR">🇫🇷 French</option>
+      <option value="de-DE">🇩🇪 German</option>
+      <option value="it-IT">🇮🇹 Italian</option>
+      <option value="ja-JP">🇯🇵 Japanese</option>
+      <option value="zh-CN">🇨🇳 Chinese</option>
+      <option value="ko-KR">🇰🇷 Korean</option>
+      <option value="ru-RU">🇷🇺 Russian</option>
+      <option value="ar-SA">🇸🇦 Arabic</option>
+      <option value="pt-BR">🇧🇷 Portuguese</option>
+    </select>
+    <span id="status">🎭 Ready — Load a PDF to begin</span>
   </div>
 
+  <!-- MAIN STAGE -->
+  <div id="stage">
+    <!-- LEFT: PDF Pages -->
+    <div id="pdf-panel">
+      <div id="pdf-header">
+        <span>📑 Pages</span>
+        <span id="page-count">0</span>
+      </div>
+      <div id="pdf-pages"></div>
+    </div>
+    <div class="sidebar-toggle" id="toggle-pdf" onclick="togglePanel('pdf-panel')">◀</div>
+
+    <!-- CENTER: Theater -->
+    <div id="theater">
+      <div id="curtain"></div>
+      <div id="spotlight"></div>
+
+      <!-- Character Strip -->
+      <div id="character-strip"></div>
+
+      <!-- Dialogue Box -->
+      <div id="dialogue-box">
+        <div id="dialogue-text">Welcome to Chandamama Podcast Theater.
+
+Paste a PDF URL above and click "Load PDF" to turn any story into an immersive audio-visual experience with character voices, portraits, and stage lighting.</div>
+        <div id="dialogue-meta">
+          <span id="speaker-name">— Narrator</span>
+          <span id="page-indicator">Page 0 / 0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Controls -->
+    <div class="sidebar-toggle" id="toggle-ctrl" onclick="togglePanel('controls-panel')">▶</div>
+    <div id="controls-panel">
+      <!-- Playback -->
+      <div class="panel-section" id="playback">
+        <button class="secondary" onclick="prevLine()" title="Previous (◀)">⏮</button>
+        <button id="play-btn" onclick="togglePlay()" title="Play/Pause (Space)">▶</button>
+        <button class="secondary" onclick="nextLine()" title="Next (▶)">⏭</button>
+        <div id="progress-wrap" onclick="seek(event)"><div id="progress-bar"></div></div>
+      </div>
+
+      <!-- Voice Mapping -->
+      <div class="panel-section">
+        <h3>🎭 Character Voices</h3>
+        <div id="voice-settings"></div>
+      </div>
+
+      <!-- Extracted Images -->
+      <div class="panel-section">
+        <h3>🖼 Extracted Images</h3>
+        <div id="extracted-images"></div>
+      </div>
+
+      <!-- Story Settings -->
+      <div class="panel-section">
+        <h3>⚙ Audio Settings</h3>
+        <div class="slider-row">
+          <label>Speed</label>
+          <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" oninput="updateRate(this.value)">
+          <span class="val" id="rate-val">1.0</span>
+        </div>
+        <div class="slider-row">
+          <label>Pitch</label>
+          <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1" oninput="updatePitch(this.value)">
+          <span class="val" id="pitch-val">1.0</span>
+        </div>
+        <div class="slider-row">
+          <label>Volume</label>
+          <input type="range" id="volume" min="0" max="1" step="0.1" value="1" oninput="updateVolume(this.value)">
+          <span class="val" id="volume-val">1.0</span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="panel-section">
+        <h3>📊 Stats</h3>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+          <div>Characters: <span id="stat-chars" style="color:var(--text)">0</span></div>
+          <div>Lines: <span id="stat-lines" style="color:var(--text)">0</span></div>
+          <div>Images: <span id="stat-images" style="color:var(--text)">0</span></div>
+          <div>Duration: <span id="stat-time" style="color:var(--text)">~0 min</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  // ==================== STATE ====================
+  let pdfDoc = null;
+  let pages = [];
+  let currentPage = 0;
+  let isPlaying = false;
+  let utterance = null;
+  let voices = [];
+  let storyLines = [];
+  let currentLine = 0;
+  let extractedImagesList = [];
+  let characterMap = {};
+  let autoAdvanceTimer = null;
+  let totalDurationEstimate = 0;
+
+  // ==================== ARCHETYPES ====================
+  const ARCHETYPES = {
+    // Animals
+    lion:      { type: "animal", gender: "male",   age: "adult",    icon: "🦁" },
+    tiger:     { type: "animal", gender: "male",   age: "adult",    icon: "🐯" },
+    bear:      { type: "animal", gender: "male",   age: "adult",    icon: "🐻" },
+    fox:       { type: "animal", gender: "neutral",age: "adult",    icon: "🦊" },
+    rabbit:    { type: "animal", gender: "neutral",age: "kid",      icon: "🐰" },
+    hare:      { type: "animal", gender: "neutral",age: "kid",      icon: "🐰" },
+    deer:      { type: "animal", gender: "female", age: "adult",    icon: "🦌" },
+    elephant:  { type: "animal", gender: "male",   age: "adult",    icon: "🐘" },
+    monkey:    { type: "animal", gender: "male",   age: "adult",    icon: "🐵" },
+    bird:      { type: "animal", gender: "neutral",age: "adult",    icon: "🐦" },
+    crow:      { type: "animal", gender: "neutral",age: "adult",    icon: "🐦‍⬛" },
+    mouse:     { type: "animal", gender: "neutral",age: "kid",      icon: "🐭" },
+    cat:       { type: "animal", gender: "neutral",age: "adult",    icon: "🐱" },
+    dog:       { type: "animal", gender: "neutral",age: "adult",    icon: "🐕" },
+    snake:     { type: "animal", gender: "neutral",age: "adult",    icon: "🐍" },
+    tortoise:  { type: "animal", gender: "neutral",age: "elderly",  icon: "🐢" },
+    turtle:    { type: "animal", gender: "neutral",age: "elderly",  icon: "🐢" },
+    frog:      { type: "animal", gender: "neutral",age: "adult",    icon: "🐸" },
+    wolf:      { type: "animal", gender: "male",   age: "adult",    icon: "🐺" },
+    horse:     { type: "animal", gender: "neutral",age: "adult",    icon: "🐴" },
+    // Humans
+    king:      { type: "human",  gender: "male",   age: "adult",    role: "captain", icon: "👑" },
+    queen:     { type: "human",  gender: "female", age: "adult",    role: "captain", icon: "👸" },
+    prince:    { type: "human",  gender: "male",   age: "boy",      icon: "🤴" },
+    princess:  { type: "human",  gender: "female", age: "girl",     icon: "👸" },
+    saint:     { type: "human",  gender: "male",   age: "elderly",  role: "saint",   icon: "👴" },
+    sage:      { type: "human",  gender: "male",   age: "elderly",  role: "saint",   icon: "🧙" },
+    rishi:     { type: "human",  gender: "male",   age: "elderly",  role: "saint",   icon: "🧙‍♂️" },
+    guru:      { type: "human",  gender: "male",   age: "elderly",  role: "saint",   icon: "🧙‍♂️" },
+    captain:   { type: "human",  gender: "male",   age: "adult",    role: "captain", icon: "⚓" },
+    soldier:   { type: "human",  gender: "male",   age: "adult",    icon: "💂" },
+    merchant:  { type: "human",  gender: "male",   age: "adult",    icon: "💰" },
+    farmer:    { type: "human",  gender: "male",   age: "adult",    icon: "👨‍🌾" },
+    boy:       { type: "human",  gender: "male",   age: "boy",      icon: "👦" },
+    girl:      { type: "human",  gender: "female", age: "girl",     icon: "👧" },
+    man:       { type: "human",  gender: "male",   age: "adult",    icon: "👨" },
+    woman:     { type: "human",  gender: "female", age: "adult",    icon: "👩" },
+    "old man": { type: "human",  gender: "male",   age: "elderly",  icon: "👴" },
+    "old woman":{ type:"human",  gender: "female", age: "elderly",  icon: "👵" },
+    mother:    { type: "human",  gender: "female", age: "adult",    icon: "👩" },
+    father:    { type: "human",  gender: "male",   age: "adult",    icon: "👨" },
+    god:       { type: "divine", gender: "male",   age: "adult",    role: "saint",   icon: "👳" },
+    goddess:   { type: "divine", gender: "female", age: "adult",    role: "saint",   icon: "🙏" },
+    narrator:  { type: "human",  gender: "neutral",age: "adult",    icon: "📖" },
+  };
+
+  // ==================== INIT ====================
+  function initVoices() {
+    voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        voices = window.speechSynthesis.getVoices();
+        updateVoices();
+      };
+    } else {
+      updateVoices();
+    }
+  }
+  initVoices();
+  setTimeout(initVoices, 800);
+
+  function setStatus(msg) { document.getElementById("status").textContent = msg; }
+
+  // ==================== PDF LOADING ====================
+  async function loadPDF() {
+    const url = document.getElementById("pdf-url").value.trim();
+    if (!url) return alert("Please enter a PDF URL");
+    setStatus("📄 Loading PDF...");
+    stop();
+    try {
+      pdfDoc = await pdfjsLib.getDocument({ url, useSystemFonts: true }).promise;
+      pages = [];
+      document.getElementById("pdf-pages").innerHTML = "";
+      document.getElementById("page-count").textContent = pdfDoc.numPages;
+
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: 0.3 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+
+        const thumb = document.createElement("div");
+        thumb.className = "page-thumb";
+        thumb.dataset.page = i;
+        thumb.onclick = () => goToPage(i);
+        thumb.appendChild(canvas);
+        const num = document.createElement("span");
+        num.className = "page-num";
+        num.textContent = i;
+        thumb.appendChild(num);
+        document.getElementById("pdf-pages").appendChild(thumb);
+
+        const textContent = await page.getTextContent();
+        const text = textContent.items.map(it => it.str).join(" ");
+        pages.push({ page: i, text, canvas: canvas.toDataURL() });
+      }
+
+      parseStory();
+      setStatus(`✅ Loaded ${pdfDoc.numPages} pages · ${storyLines.length} lines · ${Object.keys(characterMap).length} characters`);
+      if (storyLines.length > 0) {
+        currentLine = 0;
+        renderLine();
+      }
+      updateStats();
+    } catch (e) {
+      setStatus("❌ Error: " + e.message);
+      console.error(e);
+    }
+  }
+
+  // ==================== STORY PARSING ====================
+  function parseStory() {
+    storyLines = [];
+    const allText = pages.map(p => p.text).join("\n");
+    const lines = allText.split(/\n+/).filter(l => l.trim().length > 8);
+
+    let currentSpeaker = "Narrator";
+    lines.forEach((line, idx) => {
+      const speakerMatch = line.match(/^([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)[\s:]/);
+      if (speakerMatch) currentSpeaker = speakerMatch[1];
+
+      let cleanLine = line.replace(/^[^a-zA-Z]*/, "").trim();
+      if (cleanLine.length < 5) return;
+
+      const archetype = detectArchetype(currentSpeaker, cleanLine);
+      storyLines.push({
+        speaker: currentSpeaker,
+        text: cleanLine,
+        archetype: archetype,
+        page: Math.min(Math.floor((idx / lines.length) * pages.length) + 1, pages.length || 1)
+      });
+    });
+
+    if (storyLines.length === 0) {
+      pages.forEach((p, pi) => {
+        const paras = p.text.split(/\n{2,}/);
+        paras.forEach(para => {
+          if (para.trim().length > 20) {
+            storyLines.push({ speaker: "Narrator", text: para.trim(), archetype: ARCHETYPES.narrator, page: pi + 1 });
+          }
+        });
+      });
+    }
+
+    buildCharacterMap();
+    renderCharacterStrip();
+    renderVoiceSettings();
+    estimateDuration();
+  }
+
+  function detectArchetype(speaker, text) {
+    const lower = (speaker + " " + text).toLowerCase();
+    for (const [key, val] of Object.entries(ARCHETYPES)) {
+      if (lower.includes(key)) return { name: key, ...val };
+    }
+    let gender = "neutral";
+    if (/\b(he|his|him|man|boy|king|prince|father|brother|son|husband|male)\b/i.test(lower)) gender = "male";
+    else if (/\b(she|her|hers|woman|girl|queen|princess|mother|sister|daughter|wife|female)\b/i.test(lower)) gender = "female";
+    return { name: speaker, type: "unknown", gender, age: "adult", icon: gender === "female" ? "👩" : "👨" };
+  }
+
+  function buildCharacterMap() {
+    characterMap = {};
+    storyLines.forEach(line => {
+      const name = line.speaker;
+      if (!characterMap[name]) {
+        characterMap[name] = { name, archetype: line.archetype, lines: 0, image: null };
+      }
+      characterMap[name].lines++;
+      if (line.archetype && (!characterMap[name].archetype || characterMap[name].archetype.type === "unknown")) {
+        characterMap[name].archetype = line.archetype;
+      }
+    });
+  }
+
+  function estimateDuration() {
+    const wordsPerMin = 130;
+    const totalWords = storyLines.reduce((sum, l) => sum + l.text.split(/\s+/).length, 0);
+    totalDurationEstimate = Math.ceil(totalWords / wordsPerMin);
+    document.getElementById("stat-time").textContent = `~${totalDurationEstimate} min`;
+  }
+
+  function updateStats() {
+    document.getElementById("stat-chars").textContent = Object.keys(characterMap).length;
+    document.getElementById("stat-lines").textContent = storyLines.length;
+    document.getElementById("stat-images").textContent = extractedImagesList.length;
+  }
+
+  // ==================== IMAGE EXTRACTION ====================
+  async function extractImages() {
+    if (!pdfDoc) return alert("Load a PDF first");
+    setStatus("🖼 Extracting images...");
+    extractedImagesList = [];
+    const container = document.getElementById("extracted-images");
+    container.innerHTML = "";
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const ops = await page.getOperatorList();
+      for (let j = 0; j < ops.fnArray.length; j++) {
+        if (ops.fnArray[j] === pdfjsLib.OPS.paintImageXObject) {
+          const imgName = ops.argsArray[j][0];
+          try {
+            const imgObj = await page.objs.get(imgName);
+            if (imgObj && imgObj.data) {
+              const blob = new Blob([imgObj.data], { type: "image/png" });
+              const url = URL.createObjectURL(blob);
+              extractedImagesList.push({ url, page: i, name: imgName });
+              appendExtractedImage(url, i, imgName);
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
+    // Fallback: page renders
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      extractedImagesList.push({ url: p.canvas, page: p.page, name: "page-render" });
+      appendExtractedImage(p.canvas, p.page, "page");
+    }
+
+    autoAssignImages();
+    renderCharacterStrip();
+    updateStats();
+    setStatus(`✅ Extracted ${extractedImagesList.length} images`);
+  }
+
+  function appendExtractedImage(url, page, name) {
+    const container = document.getElementById("extracted-images");
+    const div = document.createElement("div");
+    div.className = "ext-img";
+    div.onclick = () => assignImageToCharacter(url);
+    const img = document.createElement("img");
+    img.src = url;
+    div.appendChild(img);
+    const tag = document.createElement("span");
+    tag.className = "img-tag";
+    tag.textContent = `P${page}`;
+    div.appendChild(tag);
+    container.appendChild(div);
+  }
+
+  function autoAssignImages() {
+    const chars = Object.keys(characterMap);
+    extractedImagesList.forEach((img, idx) => {
+      if (chars[idx]) characterMap[chars[idx]].image = img.url;
+    });
+  }
+
+  function assignImageToCharacter(url) {
+    const names = Object.keys(characterMap);
+    if (names.length === 0) return alert("No characters detected yet.");
+    const name = prompt("Assign to character:\n" + names.join("\n"), names[0]);
+    if (name && characterMap[name]) {
+      characterMap[name].image = url;
+      renderCharacterStrip();
+    }
+  }
+
+  // ==================== THEATER RENDERING ====================
+  function renderCharacterStrip() {
+    const strip = document.getElementById("character-strip");
+    strip.innerHTML = "";
+    Object.values(characterMap).forEach(char => {
+      const div = document.createElement("div");
+      div.className = "character";
+      div.id = `char-${char.name.replace(/\s/g, "_")}`;
+      div.onclick = () => { /* future: show character details */ };
+      const img = document.createElement("img");
+      img.src = char.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(char.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+      img.alt = char.name;
+      img.onerror = () => { img.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(char.name)}`; };
+      div.appendChild(img);
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = char.name;
+      div.appendChild(label);
+      if (char.archetype) {
+        const badge = document.createElement("div");
+        badge.className = "type-badge";
+        badge.textContent = `${char.archetype.icon} ${char.archetype.type}`;
+        div.appendChild(badge);
+      }
+      strip.appendChild(div);
+    });
+  }
+
+  function renderLine() {
+    if (currentLine >= storyLines.length) { stop(); return; }
+    const line = storyLines[currentLine];
+    document.getElementById("dialogue-text").textContent = line.text;
+    document.getElementById("speaker-name").textContent = line.speaker;
+    document.getElementById("page-indicator").textContent = `Page ${line.page} / ${pages.length}  ·  Line ${currentLine + 1} / ${storyLines.length}`;
+
+    document.querySelectorAll(".character").forEach(c => c.classList.remove("active", "speaking"));
+    const charEl = document.getElementById(`char-${line.speaker.replace(/\s/g, "_")}`);
+    if (charEl) {
+      charEl.classList.add("active", "speaking");
+      const rect = charEl.getBoundingClientRect();
+      const stage = document.getElementById("theater").getBoundingClientRect();
+      const spotlight = document.getElementById("spotlight");
+      spotlight.style.left = (rect.left - stage.left + rect.width / 2 - 160) + "px";
+      spotlight.style.top = (rect.top - stage.top + rect.height / 2 - 160) + "px";
+    } else {
+      // Narrator spotlight on dialogue box
+      const box = document.getElementById("dialogue-box").getBoundingClientRect();
+      const stage = document.getElementById("theater").getBoundingClientRect();
+      const spotlight = document.getElementById("spotlight");
+      spotlight.style.left = (box.left - stage.left + box.width / 2 - 160) + "px";
+      spotlight.style.top = (box.top - stage.top + box.height / 2 - 160) + "px";
+    }
+
+    document.getElementById("progress-bar").style.width = ((currentLine / Math.max(storyLines.length - 1, 1)) * 100) + "%";
+
+    document.querySelectorAll(".page-thumb").forEach(t => t.classList.remove("active"));
+    const thumb = document.querySelector(`.page-thumb[data-page="${line.page}"]`);
+    if (thumb) {
+      thumb.classList.add("active");
+      thumb.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  // ==================== SPEECH ====================
+  function getVoiceForCharacter(name) {
+    const char = characterMap[name];
+    const lang = document.getElementById("lang-select").value;
+    const select = document.getElementById(`voice-${name.replace(/\s/g, "_")}`);
+    if (select && select.value) return voices.find(v => v.name === select.value);
+
+    let candidates = voices.filter(v => v.lang.startsWith(lang.split("-")[0]));
+    if (candidates.length === 0) candidates = voices;
+    if (char && char.archetype) {
+      const gender = char.archetype.gender;
+      const age = char.archetype.age;
+      let filtered = candidates.filter(v => {
+        const n = v.name.toLowerCase();
+        if (gender === "female") return /female|woman|girl|samantha|victoria|zira|veena|lekha|swara/i.test(n);
+        if (gender === "male") return /male|man|boy|david|james|daniel|arjun|ravi|kunal/i.test(n);
+        return true;
+      });
+      if (filtered.length > 0) candidates = filtered;
+      // Age-based pitch hint (stored on utterance later)
+    }
+    return candidates[0] || voices[0];
+  }
+
+  function getPitchForCharacter(name) {
+    const char = characterMap[name];
+    if (!char || !char.archetype) return parseFloat(document.getElementById("pitch").value) || 1;
+    const age = char.archetype.age;
+    const base = parseFloat(document.getElementById("pitch").value) || 1;
+    if (age === "kid" || age === "boy" || age === "girl") return base * 1.3;
+    if (age === "elderly" || age === "old") return base * 0.75;
+    return base;
+  }
+
+  function speakCurrentLine() {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const line = storyLines[currentLine];
+    utterance = new SpeechSynthesisUtterance(line.text);
+    const voice = getVoiceForCharacter(line.speaker);
+    if (voice) utterance.voice = voice;
+    utterance.rate = parseFloat(document.getElementById("rate").value) || 1;
+    utterance.pitch = getPitchForCharacter(line.speaker);
+    utterance.volume = parseFloat(document.getElementById("volume").value) || 1;
+    utterance.lang = document.getElementById("lang-select").value;
+
+    utterance.onend = () => {
+      if (isPlaying) {
+        autoAdvanceTimer = setTimeout(() => { nextLine(); speakCurrentLine(); }, 600);
+      }
+    };
+    utterance.onerror = (e) => { console.warn("Speech error:", e); isPlaying = false; updatePlayBtn(); };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function togglePlay() {
+    isPlaying = !isPlaying;
+    updatePlayBtn();
+    if (isPlaying) {
+      speakCurrentLine();
+    } else {
+      window.speechSynthesis.cancel();
+      clearTimeout(autoAdvanceTimer);
+    }
+  }
+
+  function updatePlayBtn() {
+    document.getElementById("play-btn").textContent = isPlaying ? "⏸" : "▶";
+  }
+
+  function nextLine() {
+    if (currentLine < storyLines.length - 1) {
+      currentLine++;
+      renderLine();
+    }
+  }
+
+  function prevLine() {
+    if (currentLine > 0) {
+      currentLine--;
+      renderLine();
+    }
+  }
+
+  function stop() {
+    isPlaying = false;
+    updatePlayBtn();
+    window.speechSynthesis.cancel();
+    clearTimeout(autoAdvanceTimer);
+  }
+
+  function seek(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    currentLine = Math.floor(pct * storyLines.length);
+    renderLine();
+    if (isPlaying) { window.speechSynthesis.cancel(); speakCurrentLine(); }
+  }
+
+  // ==================== VOICE SETTINGS UI ====================
+  function updateVoices() {
+    voices = window.speechSynthesis.getVoices();
+    renderVoiceSettings();
+  }
+
+  function renderVoiceSettings() {
+    const container = document.getElementById("voice-settings");
+    container.innerHTML = "";
+    const lang = document.getElementById("lang-select").value;
+    const langVoices = voices.filter(v => v.lang.startsWith(lang.split("-")[0]));
+    const allVoices = langVoices.length > 0 ? langVoices : voices;
+    const options = allVoices.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join("");
+
+    Object.values(characterMap).forEach(char => {
+      const row = document.createElement("div");
+      row.className = "voice-row";
+      const label = document.createElement("label");
+      label.textContent = char.name;
+      label.title = char.name;
+      row.appendChild(label);
+      const select = document.createElement("select");
+      select.id = `voice-${char.name.replace(/\s/g, "_")}`;
+      select.innerHTML = `<option value="">🎲 Auto</option>` + options;
+      row.appendChild(select);
+      container.appendChild(row);
+    });
+  }
+
+  function updateRate(v) { document.getElementById("rate-val").textContent = parseFloat(v).toFixed(1); }
+  function updatePitch(v) { document.getElementById("pitch-val").textContent = parseFloat(v).toFixed(1); }
+  function updateVolume(v) { document.getElementById("volume-val").textContent = parseFloat(v).toFixed(1); }
+
+  // ==================== NAVIGATION ====================
+  function goToPage(n) {
+    const firstLine = storyLines.findIndex(l => l.page >= n);
+    if (firstLine >= 0) { currentLine = firstLine; renderLine(); }
+  }
+
+  function togglePanel(id) {
+    document.getElementById(id).classList.toggle("collapsed");
+  }
+
+  // ==================== DOWNLOAD SCRIPT ====================
+  function downloadScript() {
+    if (storyLines.length === 0) return alert("No story loaded.");
+    let script = "CHANDAMAMA PODCAST THEATER — SCRIPT\n";
+    script += "=" .repeat(50) + "\n\n";
+    storyLines.forEach((line, i) => {
+      script += `[${String(i+1).padStart(3,"0")}] ${line.speaker.toUpperCase()}\n`;
+      script += `    ${line.text}\n`;
+      script += `    [Page ${line.page}]\n\n`;
+    });
+    const blob = new Blob([script], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "chandamama-script.txt";
+    a.click();
+  }
+
+  // ==================== KEYBOARD SHORTCUTS ====================
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+    if (e.code === "ArrowRight") { e.preventDefault(); nextLine(); if (isPlaying) { window.speechSynthesis.cancel(); speakCurrentLine(); } }
+    if (e.code === "ArrowLeft") { e.preventDefault(); prevLine(); if (isPlaying) { window.speechSynthesis.cancel(); speakCurrentLine(); } }
+  });
+</script>
 </body>
 </html>
