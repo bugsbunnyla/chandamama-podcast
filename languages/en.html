@@ -11,13 +11,9 @@
 </head>
 <body class="lang-page">
   <div class="stars-bg"></div>
-
   <header class="hero">
     <a href="../index.html" class="back-link">← Back to All Languages</a>
-    <div class="moon">
-      <div class="moon-face">🇬🇧</div>
-      <div class="moon-glow"></div>
-    </div>
+    <div class="moon"><div class="moon-face">🇬🇧</div><div class="moon-glow"></div></div>
     <h1>Chandamama — English</h1>
     <p class="subtitle">English</p>
     <p class="tagline">Narrated by Uncle Moonbeam & The Royal Cast</p>
@@ -27,7 +23,6 @@
       <span class="badge">📡 <a href="../rss/en.xml" style="color:inherit;text-decoration:underline;">RSS Feed</a></span>
     </div>
   </header>
-
   <main style="max-width: 900px;">
     <div class="voice-notice">
       <span>🎙️</span>
@@ -36,72 +31,33 @@
         Each character speaks with a distinct voice, pitch, and speed. For best results, use Chrome, Edge, or Safari.
       </div>
     </div>
-
     <section>
       <h2>Episodes</h2>
-      <div class="episode-list" id="episodeList">
-        <!-- Episodes rendered by JS -->
-      </div>
+      <div class="episode-list" id="episodeList"></div>
     </section>
   </main>
-
   <footer>
     <p>Made with 🌙 for children everywhere.</p>
     <p><a href="../index.html">← Back to All Languages</a></p>
   </footer>
-
   <script src="../assets/js/theater.js"></script>
   <script src="../assets/js/player.js"></script>
   <script>
-    // Episode data embedded for this page
     const EPISODES = [
-      {
-        id: "ep00",
-        title: "Welcome to Chandamama — Uncle Moon's Story House",
-        subtitle: "A warm introduction to the magical world of Chandamama",
-        art: "🌙",
-        duration: "8:00",
-        date: "Dec 1999",
-        ages: "4–12",
-        audio: "../audio/en/ep00.mp3",
-        cast: ["Uncle Moonbeam"]
-      },
-      {
-        id: "ep01",
-        title: "The King and the Queen — A Royal Mystery",
-        subtitle: "From the cover of the December 1999 issue: What does the King see?",
-        art: "👑",
-        duration: "15:00",
-        date: "Dec 1999",
-        ages: "7–9",
-        audio: "../audio/en/ep01.mp3",
-        cast: ["Uncle Moonbeam", "King Vikramaditya", "Queen Ananya", "Minister Gopal"]
-      },
-      {
-        id: "ep02",
-        title: "Dr. Rabbit's Puzzle — A Maze Adventure",
-        subtitle: "Help Smita find her way to the dentist through a magical maze!",
-        art: "🐰",
-        duration: "10:00",
-        date: "Dec 1999",
-        ages: "4–6",
-        audio: "../audio/en/ep02.mp3",
-        cast: ["Uncle Moonbeam", "Smita", "Dr. Rabbit", "Mama"]
-      }
+      { id: "ep00", title: "Welcome to Chandamama — Uncle Moonbeam's Story House", subtitle: "A warm introduction to the magical world of Chandamama", art: "🌙", duration: "12:00", date: "Dec 1999", ages: "All ages", audio: "../audio/en/ep00.mp3", cast: ["Uncle Moonbeam", "Little Star"] },
+      { id: "ep01", title: "The King and the Queen — The Lamp of Dharma", subtitle: "From the cover of December 1999: King Vikramaditya sees a mystery beyond the seven hills.", art: "👑", duration: "22:00", date: "Dec 1999", ages: "7–12", audio: "../audio/en/ep01.mp3", cast: ["Uncle Moonbeam", "King Vikramaditya", "Queen Ananya", "Minister Gopal", "Captain Veer", "Old Sage"] },
+      { id: "ep02", title: "Dr. Rabbit's Puzzle — The Maze of Friendship", subtitle: "From pages 2–3 of December 1999: Help Smita find her way through the magical maze!", art: "🐰", duration: "18:00", date: "Dec 1999", ages: "4–8", audio: "../audio/en/ep02.mp3", cast: ["Uncle Moonbeam", "Smita", "Dr. Rabbit", "Mama", "Mr. Squirrel", "Butterfly Queen"] }
     ];
 
-    // Render episodes
     function renderEpisodes() {
       const container = document.getElementById('episodeList');
-
-      EPISODES.forEach((ep, idx) => {
+      EPISODES.forEach(ep => {
         const card = document.createElement('div');
         card.className = 'episode-card';
         card.dataset.audio = ep.audio;
         card.dataset.title = ep.title;
         card.dataset.lang = 'English';
         card.id = ep.id;
-
         card.innerHTML = `
           <div class="episode-art">${ep.art}</div>
           <div class="episode-info">
@@ -119,52 +75,31 @@
               <button class="btn-transcript" onclick="toggleTranscript('${ep.id}')">📄 Transcript</button>
               <button class="btn-cast" onclick="toggleCast('${ep.id}')">🎭 Cast</button>
             </div>
-            <div class="transcript-panel" id="transcript-${ep.id}">
-              <h4>📄 Transcript — ${ep.title}</h4>
-              <div id="transcript-content-${ep.id}"><p><em>Loading transcript...</em></p></div>
-            </div>
-            <div class="cast-panel" id="cast-${ep.id}">
-              <h4>🎭 Cast — ${ep.title}</h4>
-              <div class="cast-panel-grid" id="cast-content-${ep.id}"></div>
-            </div>
+            <div class="transcript-panel" id="transcript-${ep.id}"><h4>📄 Transcript — ${ep.title}</h4><div id="transcript-content-${ep.id}"><p><em>Loading transcript...</em></p></div></div>
+            <div class="cast-panel" id="cast-${ep.id}"><h4>🎭 Cast — ${ep.title}</h4><div class="cast-panel-grid" id="cast-content-${ep.id}"></div></div>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    // Start theater mode for an episode
     async function startTheater(episodeId) {
-      // Check for speech synthesis support
-      if (!window.speechSynthesis) {
-        alert('Your browser does not support Theater Mode. Try Chrome, Edge, or Safari.');
-        return;
-      }
-
-      // Load story and start
+      if (!window.speechSynthesis) { alert('Your browser does not support Theater Mode. Try Chrome, Edge, or Safari.'); return; }
       await ChandamamaTheater.openEpisode('../stories/en.json', episodeId);
     }
 
-    // Toggle transcript panel
     async function toggleTranscript(episodeId) {
       const panel = document.getElementById('transcript-' + episodeId);
       const content = document.getElementById('transcript-content-' + episodeId);
       const isActive = panel.classList.contains('active');
-
-      // Close all other panels
       document.querySelectorAll('.transcript-panel, .cast-panel').forEach(p => p.classList.remove('active'));
-
       if (isActive) return;
-
       panel.classList.add('active');
-
-      // Load transcript if not already loaded
       if (content.dataset.loaded !== 'true') {
         try {
           const resp = await fetch('../stories/en.json');
           const story = await resp.json();
           const episode = story.episodes.find(e => e.id === episodeId);
-
           if (episode && episode.script) {
             content.innerHTML = episode.script.map((line, i) => `
               <div class="transcript-line" data-index="${i}" onclick="jumpToLine('${episodeId}', ${i})">
@@ -174,30 +109,22 @@
             `).join('');
             content.dataset.loaded = 'true';
           }
-        } catch (e) {
-          content.innerHTML = '<p><em>Could not load transcript.</em></p>';
-        }
+        } catch (e) { content.innerHTML = '<p><em>Could not load transcript.</em></p>'; }
       }
     }
 
-    // Toggle cast panel
     async function toggleCast(episodeId) {
       const panel = document.getElementById('cast-' + episodeId);
       const content = document.getElementById('cast-content-' + episodeId);
       const isActive = panel.classList.contains('active');
-
       document.querySelectorAll('.transcript-panel, .cast-panel').forEach(p => p.classList.remove('active'));
-
       if (isActive) return;
-
       panel.classList.add('active');
-
       if (content.dataset.loaded !== 'true') {
         try {
           const resp = await fetch('../stories/en.json');
           const story = await resp.json();
           const episode = story.episodes.find(e => e.id === episodeId);
-
           if (episode && episode.cast) {
             content.innerHTML = episode.cast.map(c => `
               <div class="cast-panel-card">
@@ -209,26 +136,20 @@
             `).join('');
             content.dataset.loaded = 'true';
           }
-        } catch (e) {
-          content.innerHTML = '<p><em>Could not load cast.</em></p>';
-        }
+        } catch (e) { content.innerHTML = '<p><em>Could not load cast.</em></p>'; }
       }
     }
 
-    // Jump to a specific line in theater mode
     function jumpToLine(episodeId, lineIndex) {
       startTheater(episodeId).then(() => {
         setTimeout(() => {
           window.theater.currentLine = lineIndex;
           window.theater.renderLine(lineIndex);
-          if (window.theater.isPlaying) {
-            window.theater.speakLine(lineIndex);
-          }
+          if (window.theater.isPlaying) window.theater.speakLine(lineIndex);
         }, 500);
       });
     }
 
-    // Initialize
     renderEpisodes();
   </script>
 </body>

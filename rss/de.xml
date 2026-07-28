@@ -1,66 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" 
-     xmlns:content="http://purl.org/rss/1.0/modules/content/" 
-     version="2.0">
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">
   <channel>
-    <title>Chandamama Moonlight Stories — German</title>
+    <title>Chandamama — German</title>
     <link>https://bugsbunnyla.github.io/chandamama-podcast/languages/de.html</link>
     <language>de</language>
-    <description>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in German for children ages 4-12. Free, forever.</description>
-    <itunes:author>Chandamama Cultural Preservation Project</itunes:author>
-    <itunes:subtitle>Sanskrit stories for children in German</itunes:subtitle>
-    <itunes:summary>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in German for children ages 4-12. Each episode features culturally-rooted storytelling, gentle music, and interactive moments for young listeners.</itunes:summary>
-    <itunes:owner>
-      <itunes:name>Chandamama Project</itunes:name>
-      <itunes:email>hello@chandamama-stories.org</itunes:email>
-    </itunes:owner>
-    <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-de.jpg"/>
-    <itunes:category text="Kids &amp; Family">
-      <itunes:category text="Stories for Kids"/>
-    </itunes:category>
-    <itunes:category text="Education">
-      <itunes:category text="Language Learning"/>
-    </itunes:category>
-    <itunes:explicit>no</itunes:explicit>
-    <itunes:type>episodic</itunes:type>
+    <copyright>CC BY-SA 4.0</copyright>
+    <itunes:author>Chandamama Moonlight Stories</itunes:author>
+    <itunes:summary>Ancient Sanskrit tales retold as enacted multi-cast podcasts for children.</itunes:summary>
+    <description>Ancient Sanskrit tales retold as enacted multi-cast podcasts for children.</description>
+    <itunes:owner><itunes:name>Chandamama</itunes:name><itunes:email>hello@chandamama.example</itunes:email></itunes:owner>
+    <itunes:category text="Kids &amp; Family"/><itunes:category text="Fiction"/>
     <item>
-      <title>Willkommen bei Chandamama — Onkel Monds Geschichtenhaus</title>
-      <description>Willkommen in Onkel Monds Geschichtenhaus. Der Märchen Opa erzählt magische Geschichten.</description>
-      <enclosure url="https://archive.org/download/chandamama-german-ep00/chandamama-de-ep00-welcome.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/de.xml#chandamama-de-ep00-welcome</guid>
-      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
-      <itunes:duration>8:00</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-de.jpg"/>
-      <itunes:category text="Kids &amp; Family">
-        <itunes:category text="Stories for Kids"/>
-      </itunes:category>
+      <title>Welcome to Chandamama — Uncle Moonbeam's Story House</title>
+      <itunes:author>Uncle Moonbeam</itunes:author>
+      <itunes:subtitle>A warm introduction to the magical world of Chandamama</itunes:subtitle>
+      <itunes:summary>Meet Uncle Moonbeam and discover the history of the Chandamama magazine.</itunes:summary>
+      <enclosure url="https://bugsbunnyla.github.io/chandamama-podcast/audio/de/ep00.mp3" length="28394" type="audio/mpeg"/>
+      <guid>chandamama-de-ep00</guid>
+      <pubDate>Fri, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>12:00</itunes:duration>
+      <itunes:episode>0</itunes:episode><itunes:season>1</itunes:season>
     </item>
     <item>
-      <title>Der König und die Königin — Ein Königliches Mysterium</title>
-      <description>Vom Dezember 1999 Cover: Ein König zeigt auf etwas in der Ferne, und seine Königin hört mit Staunen zu.</description>
-      <enclosure url="https://archive.org/download/chandamama-german-ep01/chandamama-de-ep01-royal.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/de.xml#chandamama-de-ep01-royal</guid>
-      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
-      <itunes:duration>15:00</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-de.jpg"/>
-      <itunes:category text="Kids &amp; Family">
-        <itunes:category text="Stories for Kids"/>
-      </itunes:category>
+      <title>The King and the Queen — The Lamp of Dharma</title>
+      <itunes:author>Chandamama Cast</itunes:author>
+      <itunes:subtitle>King Vikramaditya sees a mystery beyond the seven hills.</itunes:subtitle>
+      <itunes:summary>A royal mystery enacted by six characters with scene-changing backgrounds.</itunes:summary>
+      <enclosure url="https://bugsbunnyla.github.io/chandamama-podcast/audio/de/ep01.mp3" length="31881" type="audio/mpeg"/>
+      <guid>chandamama-de-ep01</guid>
+      <pubDate>Fri, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>22:00</itunes:duration>
+      <itunes:episode>1</itunes:episode><itunes:season>1</itunes:season>
     </item>
     <item>
-      <title>Dr. Hasens Rätsel</title>
-      <description>Hilf Smita, den Zahnarzt durch ein magisches Labyrinth zu erreichen!</description>
-      <enclosure url="https://archive.org/download/chandamama-german-ep02/chandamama-de-ep02-rabbit.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/de.xml#chandamama-de-ep02-rabbit</guid>
-      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
-      <itunes:duration>10:00</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-de.jpg"/>
-      <itunes:category text="Kids &amp; Family">
-        <itunes:category text="Stories for Kids"/>
-      </itunes:category>
+      <title>Dr. Rabbit's Puzzle — The Maze of Friendship</title>
+      <itunes:author>Chandamama Cast</itunes:author>
+      <itunes:subtitle>Help Smita find her way through the magical maze!</itunes:subtitle>
+      <itunes:summary>A fun interactive story about kindness, bravery, and helping friends.</itunes:summary>
+      <enclosure url="https://bugsbunnyla.github.io/chandamama-podcast/audio/de/ep02.mp3" length="29727" type="audio/mpeg"/>
+      <guid>chandamama-de-ep02</guid>
+      <pubDate>Fri, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>18:00</itunes:duration>
+      <itunes:episode>2</itunes:episode><itunes:season>1</itunes:season>
     </item>
   </channel>
 </rss>

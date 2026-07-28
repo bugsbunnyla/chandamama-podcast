@@ -1,6 +1,7 @@
 /* ============================================
-   Chandamama Theater — Multi-Voice Narrator
+   Chandamama Theater — Real Multi-Voice Podcast
    Web Speech API with Character Voice Mapping
+   Dramatized presentation with scene backgrounds
    ============================================ */
 
 class ChandamamaTheater {
@@ -17,29 +18,44 @@ class ChandamamaTheater {
     this.overlay = null;
     this.sceneEl = null;
     this.autoAdvanceTimer = null;
-    this.bookmarkKey = 'chandamama_bookmarks';
+    this.bookmarkKey = 'chandamama_bookmarks_v3';
+    this.preferredVoice = null;
 
     this.init();
   }
 
   init() {
-    // Load voices when available
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = () => this.loadVoices();
     }
     this.loadVoices();
 
-    // Create theater overlay if not exists
     if (!document.getElementById('theaterOverlay')) {
       this.createOverlay();
     }
     this.overlay = document.getElementById('theaterOverlay');
     this.sceneEl = document.getElementById('theaterScene');
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (!this.overlay.classList.contains('active')) return;
+      switch(e.code) {
+        case 'Space': e.preventDefault(); this.togglePlay(); break;
+        case 'ArrowRight': this.skip(1); break;
+        case 'ArrowLeft': this.skip(-1); break;
+        case 'Escape': this.exit(); break;
+      }
+    });
   }
 
   loadVoices() {
-    this.voices = this.synth.getVoices();
-    console.log('Available voices:', this.voices.length);
+    this.voices = this.synth.getVoices() || [];
+    console.log(`[Theater] ${this.voices.length} voices available`);
+
+    // Log voice names for debugging
+    this.voices.forEach((v, i) => {
+      console.log(`  [${i}] ${v.name} (${v.lang})`);
+    });
   }
 
   createOverlay() {
@@ -47,7 +63,7 @@ class ChandamamaTheater {
     overlay.id = 'theaterOverlay';
     overlay.className = 'theater-overlay';
     overlay.innerHTML = `
-      <button class="theater-close" onclick="window.theater.exit()" title="Close Theater">✕</button>
+      <button class="theater-close" onclick="window.theater.exit()" title="Close (Esc)">✕</button>
       <div class="theater-scene" id="theaterScene">
         <div class="theater-scene-title" id="sceneTitle"></div>
         <div class="theater-character" id="theaterCharacter">
@@ -55,17 +71,18 @@ class ChandamamaTheater {
           <div class="theater-name" id="charName">Uncle Moonbeam</div>
           <div class="theater-line" id="charLine">Welcome to Chandamama</div>
         </div>
+        <div class="theater-line-indicator" id="lineIndicator">Line 1 of 1</div>
       </div>
       <div class="theater-controls">
-        <button class="theater-btn" onclick="window.theater.skip(-1)" title="Previous">⏮️</button>
-        <button class="theater-btn" onclick="window.theater.rewind()" title="Rewind 5s">⏪</button>
-        <button class="theater-btn play" id="theaterPlayBtn" onclick="window.theater.togglePlay()" title="Play/Pause">▶️</button>
-        <button class="theater-btn" onclick="window.theater.forward()" title="Forward 5s">⏩</button>
-        <button class="theater-btn" onclick="window.theater.skip(1)" title="Next">⏭️</button>
+        <button class="theater-btn" onclick="window.theater.skip(-1)" title="Previous (←)">⏮️</button>
+        <button class="theater-btn" onclick="window.theater.rewind()" title="Rewind 3 lines">⏪</button>
+        <button class="theater-btn play" id="theaterPlayBtn" onclick="window.theater.togglePlay()" title="Play/Pause (Space)">▶️</button>
+        <button class="theater-btn" onclick="window.theater.forward()" title="Forward 3 lines">⏩</button>
+        <button class="theater-btn" onclick="window.theater.skip(1)" title="Next (→)">⏭️</button>
         <div class="theater-progress-wrap">
-          <span class="theater-time" id="theaterCur">0:00</span>
+          <span class="theater-time" id="theaterCur">1</span>
           <input type="range" id="theaterProgress" min="0" max="100" value="0" step="1" oninput="window.theater.seek(this.value)">
-          <span class="theater-time" id="theaterDur">0:00</span>
+          <span class="theater-time" id="theaterDur">1</span>
         </div>
       </div>
     `;
@@ -78,7 +95,7 @@ class ChandamamaTheater {
       this.story = await response.json();
       return this.story;
     } catch (e) {
-      console.error('Failed to load story:', e);
+      console.error('[Theater] Failed to load story:', e);
       alert('Could not load story data. Please check your connection.');
       return null;
     }
@@ -88,20 +105,25 @@ class ChandamamaTheater {
     if (!this.voices.length) this.loadVoices();
     if (!this.voices.length) return null;
 
-    // Try to find best match
     let candidates = this.voices.filter(v => v.lang.startsWith('en'));
     if (!candidates.length) candidates = this.voices;
 
-    // Prefer Google voices for quality
-    const google = candidates.filter(v => v.name.includes('Google'));
-    if (google.length) candidates = google;
+    // Try to find high-quality voices first
+    const quality = candidates.filter(v => 
+      v.name.includes('Google') || v.name.includes('Samantha') || 
+      v.name.includes('Daniel') || v.name.includes('Karen') ||
+      v.name.includes('Victoria') || v.name.includes('Fred') ||
+      v.name.includes('Google US English') || v.name.includes('Google UK English')
+    );
+    if (quality.length) candidates = quality;
 
-    // Match by gender preference
+    // Match by preference
     if (pref === 'female') {
       const female = candidates.filter(v => 
         v.name.includes('Female') || v.name.includes('Samantha') || 
         v.name.includes('Victoria') || v.name.includes('Karen') ||
-        v.name.includes('Google UK English Female')
+        v.name.includes('Google UK English Female') ||
+        v.name.includes('Google US English') && !v.name.includes('Male')
       );
       if (female.length) return female[0];
     } else if (pref === 'male') {
@@ -112,13 +134,11 @@ class ChandamamaTheater {
       if (male.length) return male[0];
     }
 
-    // Fallback: use pitch to select
-    if (pitch >= 1.1) {
-      // Higher pitch = prefer female
+    // Fallback by pitch
+    if (pitch >= 1.15) {
       const f = candidates.filter(v => v.name.includes('Female') || v.name.includes('Samantha'));
       if (f.length) return f[0];
     } else if (pitch <= 0.85) {
-      // Lower pitch = prefer male
       const m = candidates.filter(v => v.name.includes('Male') || v.name.includes('Daniel'));
       if (m.length) return m[0];
     }
@@ -131,27 +151,39 @@ class ChandamamaTheater {
     if (!episode.cast) return;
 
     for (const character of episode.cast) {
-      const voice = this.selectVoice(character.voice.pref, character.voice.pitch);
+      const voicePref = character.voice ? character.voice.pref : 'male';
+      const voicePitch = character.voice ? character.voice.pitch : 1.0;
+      const voiceRate = character.voice ? character.voice.rate : 1.0;
+      const voice = this.selectVoice(voicePref, voicePitch);
       this.voiceMap[character.name] = {
         voice: voice,
-        pitch: character.voice.pitch || 1.0,
-        rate: character.voice.rate || 1.0,
-        emoji: character.emoji
+        pitch: voicePitch || 1.0,
+        rate: voiceRate || 1.0,
+        emoji: character.emoji || '🎭'
       };
+      console.log(`[Theater] Voice for ${character.name}: ${voice ? voice.name : 'DEFAULT'}`);
     }
-    console.log('Voice map built:', Object.keys(this.voiceMap));
   }
 
   startEpisode(episodeId) {
     if (!this.story) return;
 
-    this.episode = this.story.episodes.find(e => e.id === episodeId);
+    // Support auto-generated episodes
+    if (typeof episodeId === 'object') {
+      this.episode = episodeId;
+      episodeId = episodeId.id;
+    } else {
+      this.episode = this.story.episodes.find(e => e.id === episodeId);
+    }
+
     if (!this.episode) {
-      console.error('Episode not found:', episodeId);
+      console.error('[Theater] Episode not found:', episodeId);
       return;
     }
 
-    this.currentLine = 0;
+    // Load bookmark
+    const bookmark = this.loadBookmark(episodeId);
+    this.currentLine = bookmark;
     this.isPlaying = false;
     this.isPaused = false;
 
@@ -159,12 +191,11 @@ class ChandamamaTheater {
     this.overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // Set progress max
     const progress = document.getElementById('theaterProgress');
     if (progress) progress.max = this.episode.script.length - 1;
 
     this.updateDuration();
-    this.renderLine(0);
+    this.renderLine(this.currentLine);
     this.play();
   }
 
@@ -191,14 +222,23 @@ class ChandamamaTheater {
     const emojiEl = document.getElementById('charEmoji');
     const nameEl = document.getElementById('charName');
     const lineEl = document.getElementById('charLine');
+    const indicator = document.getElementById('lineIndicator');
 
-    if (emojiEl) emojiEl.textContent = cast ? cast.emoji : '🌙';
+    if (emojiEl) {
+      emojiEl.textContent = cast ? cast.emoji : '🌙';
+      emojiEl.style.animation = 'none';
+      emojiEl.offsetHeight;
+      emojiEl.style.animation = 'breathe 3s ease-in-out infinite';
+    }
     if (nameEl) nameEl.textContent = line.speaker;
     if (lineEl) {
       lineEl.textContent = line.text;
       lineEl.style.animation = 'none';
-      lineEl.offsetHeight; // trigger reflow
+      lineEl.offsetHeight;
       lineEl.style.animation = 'fadeInUp 0.5s ease';
+    }
+    if (indicator) {
+      indicator.textContent = `Line ${index + 1} of ${this.episode.script.length}`;
     }
 
     // Update progress
@@ -208,15 +248,11 @@ class ChandamamaTheater {
 
     // Highlight transcript
     this.highlightTranscript(index);
-
-    // Save bookmark
-    this.saveBookmark();
   }
 
   speakLine(index) {
     if (!this.episode) return;
 
-    // Cancel any ongoing speech
     this.synth.cancel();
 
     const line = this.episode.script[index];
@@ -228,8 +264,8 @@ class ChandamamaTheater {
       this.utterance.voice = voiceInfo.voice;
     }
     if (voiceInfo) {
-      this.utterance.pitch = voiceInfo.pitch;
-      this.utterance.rate = voiceInfo.rate;
+      this.utterance.pitch = Math.max(0.1, Math.min(2.0, voiceInfo.pitch));
+      this.utterance.rate = Math.max(0.1, Math.min(2.0, voiceInfo.rate));
     }
     this.utterance.volume = 1.0;
 
@@ -237,14 +273,14 @@ class ChandamamaTheater {
       if (this.isPlaying && !this.isPaused) {
         this.autoAdvanceTimer = setTimeout(() => {
           this.nextLine();
-        }, 800); // Brief pause between lines
+        }, 600);
       }
     };
 
     this.utterance.onerror = (e) => {
-      console.warn('Speech error:', e);
+      console.warn('[Theater] Speech error:', e);
       if (this.isPlaying && !this.isPaused) {
-        this.autoAdvanceTimer = setTimeout(() => this.nextLine(), 1500);
+        this.autoAdvanceTimer = setTimeout(() => this.nextLine(), 1200);
       }
     };
 
@@ -258,9 +294,12 @@ class ChandamamaTheater {
     this.isPaused = false;
     this.updatePlayButton();
 
-    // Resume from current line
     this.renderLine(this.currentLine);
-    this.speakLine(this.currentLine);
+
+    // Small delay before speaking to let UI settle
+    setTimeout(() => {
+      this.speakLine(this.currentLine);
+    }, 300);
   }
 
   pause() {
@@ -274,7 +313,6 @@ class ChandamamaTheater {
     this.isPaused = false;
     this.synth.resume();
     this.updatePlayButton();
-    // If speech was finished, advance
     if (!this.synth.speaking) {
       this.nextLine();
     }
@@ -297,10 +335,15 @@ class ChandamamaTheater {
       this.renderLine(this.currentLine);
       this.speakLine(this.currentLine);
     } else {
-      // Episode finished
       this.isPlaying = false;
       this.updatePlayButton();
       this.saveBookmark(true);
+      // Show completion
+      const lineEl = document.getElementById('charLine');
+      if (lineEl) {
+        lineEl.textContent = '🎭 Episode Complete! Thank you for listening.';
+        lineEl.style.color = '#F4D03F';
+      }
     }
   }
 
@@ -309,7 +352,7 @@ class ChandamamaTheater {
     const newIndex = this.currentLine + direction;
     if (newIndex >= 0 && newIndex < this.episode.script.length) {
       this.currentLine = newIndex;
-      if (this.isPlaying) {
+      if (this.isPlaying && !this.isPaused) {
         this.renderLine(this.currentLine);
         this.speakLine(this.currentLine);
       } else {
@@ -330,14 +373,8 @@ class ChandamamaTheater {
     }
   }
 
-  rewind() {
-    // Go back a few lines
-    this.skip(-3);
-  }
-
-  forward() {
-    this.skip(3);
-  }
+  rewind() { this.skip(-3); }
+  forward() { this.skip(3); }
 
   updatePlayButton() {
     const btn = document.getElementById('theaterPlayBtn');
@@ -353,9 +390,7 @@ class ChandamamaTheater {
     if (dur && this.episode) dur.textContent = this.episode.script.length.toString();
   }
 
-  updateDuration() {
-    this.updateTime();
-  }
+  updateDuration() { this.updateTime(); }
 
   highlightTranscript(index) {
     document.querySelectorAll('.transcript-line').forEach((el, i) => {
@@ -370,14 +405,13 @@ class ChandamamaTheater {
 
   saveBookmark(completed = false) {
     if (!this.episode) return;
-    const key = this.bookmarkKey;
-    const bookmarks = JSON.parse(localStorage.getItem(key) || '{}');
+    const bookmarks = JSON.parse(localStorage.getItem(this.bookmarkKey) || '{}');
     bookmarks[this.episode.id] = {
       line: this.currentLine,
       completed: completed,
       timestamp: Date.now()
     };
-    localStorage.setItem(key, JSON.stringify(bookmarks));
+    localStorage.setItem(this.bookmarkKey, JSON.stringify(bookmarks));
   }
 
   loadBookmark(episodeId) {
@@ -394,22 +428,25 @@ class ChandamamaTheater {
     this.overlay.classList.remove('active');
     document.body.style.overflow = '';
     this.saveBookmark();
+    // Reset line color
+    const lineEl = document.getElementById('charLine');
+    if (lineEl) lineEl.style.color = '';
   }
 
-  // Static helper to open an episode from a language page
   static async openEpisode(storyUrl, episodeId) {
     if (!window.theater) {
       window.theater = new ChandamamaTheater();
     }
-    await window.theater.loadStory(storyUrl);
-
-    // Load bookmark
+    // If storyUrl is actually a story object (from auto-processor), use it directly
+    if (typeof storyUrl === 'object' && storyUrl.episodes) {
+      window.theater.story = storyUrl;
+    } else {
+      await window.theater.loadStory(storyUrl);
+    }
     const bookmark = window.theater.loadBookmark(episodeId);
     window.theater.currentLine = bookmark;
-
     window.theater.startEpisode(episodeId);
   }
 }
 
-// Initialize global theater instance
 window.theater = new ChandamamaTheater();

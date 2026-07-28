@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chandamama — Telugu | Moonlight Stories</title>
+  <meta name="description" content="Chandamama Telugu episodes: enacted multi-cast stories for children.">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
   <link rel="alternate" type="application/rss+xml" title="Chandamama Telugu" href="../rss/te.xml">
@@ -12,10 +13,7 @@
   <div class="stars-bg"></div>
   <header class="hero">
     <a href="../index.html" class="back-link">← Back to All Languages</a>
-    <div class="moon">
-      <div class="moon-face">🇮🇳</div>
-      <div class="moon-glow"></div>
-    </div>
+    <div class="moon"><div class="moon-face">🇮🇳</div><div class="moon-glow"></div></div>
     <h1>Chandamama — Telugu</h1>
     <p class="subtitle">తెలుగు</p>
     <p class="tagline">Narrated by Uncle Moonbeam & The Royal Cast</p>
@@ -30,8 +28,7 @@
       <span>🎙️</span>
       <div>
         <strong>Theater Mode uses your browser's built-in voices.</strong><br>
-        Each character speaks with a distinct voice. For best results, use Chrome, Edge, or Safari.
-        <br><em>Note: Stories are currently in English. Translations welcome!</em>
+        Each character speaks with a distinct voice, pitch, and speed. For best results, use Chrome, Edge, or Safari.
       </div>
     </div>
     <section>
@@ -47,9 +44,9 @@
   <script src="../assets/js/player.js"></script>
   <script>
     const EPISODES = [
-      { id: "ep00", title: "Welcome to Chandamama — Uncle Moon's Story House", subtitle: "A warm introduction to the magical world of Chandamama", art: "🌙", duration: "8:00", date: "Dec 1999", ages: "4–12", audio: "../audio/te/ep00.mp3", cast: ["Uncle Moonbeam"] },
-      { id: "ep01", title: "The King and the Queen — A Royal Mystery", subtitle: "From the cover of the December 1999 issue: What does the King see?", art: "👑", duration: "15:00", date: "Dec 1999", ages: "7–9", audio: "../audio/te/ep01.mp3", cast: ["Uncle Moonbeam", "King Vikramaditya", "Queen Ananya", "Minister Gopal"] },
-      { id: "ep02", title: "Dr. Rabbit's Puzzle — A Maze Adventure", subtitle: "Help Smita find her way to the dentist through a magical maze!", art: "🐰", duration: "10:00", date: "Dec 1999", ages: "4–6", audio: "../audio/te/ep02.mp3", cast: ["Uncle Moonbeam", "Smita", "Dr. Rabbit", "Mama"] }
+      { id: "ep00", title: "Welcome to Chandamama — Uncle Moonbeam's Story House", subtitle: "A warm introduction to the magical world of Chandamama", art: "🌙", duration: "12:00", date: "Dec 1999", ages: "All ages", audio: "../audio/te/ep00.mp3", cast: ["Uncle Moonbeam", "Little Star"] },
+      { id: "ep01", title: "The King and the Queen — The Lamp of Dharma", subtitle: "From the cover of December 1999: King Vikramaditya sees a mystery beyond the seven hills.", art: "👑", duration: "22:00", date: "Dec 1999", ages: "7–12", audio: "../audio/te/ep01.mp3", cast: ["Uncle Moonbeam", "King Vikramaditya", "Queen Ananya", "Minister Gopal", "Captain Veer", "Old Sage"] },
+      { id: "ep02", title: "Dr. Rabbit's Puzzle — The Maze of Friendship", subtitle: "From pages 2–3 of December 1999: Help Smita find her way through the magical maze!", art: "🐰", duration: "18:00", date: "Dec 1999", ages: "4–8", audio: "../audio/te/ep02.mp3", cast: ["Uncle Moonbeam", "Smita", "Dr. Rabbit", "Mama", "Mr. Squirrel", "Butterfly Queen"] }
     ];
 
     function renderEpisodes() {
@@ -59,7 +56,7 @@
         card.className = 'episode-card';
         card.dataset.audio = ep.audio;
         card.dataset.title = ep.title;
-        card.dataset.lang = 'Telugu';
+        card.dataset.lang = 'తెలుగు';
         card.id = ep.id;
         card.innerHTML = `
           <div class="episode-art">${ep.art}</div>
@@ -87,7 +84,7 @@
     }
 
     async function startTheater(episodeId) {
-      if (!window.speechSynthesis) { alert('Your browser does not support Theater Mode.'); return; }
+      if (!window.speechSynthesis) { alert('Your browser does not support Theater Mode. Try Chrome, Edge, or Safari.'); return; }
       await ChandamamaTheater.openEpisode('../stories/en.json', episodeId);
     }
 

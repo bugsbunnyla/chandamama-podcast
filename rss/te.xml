@@ -1,66 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" 
-     xmlns:content="http://purl.org/rss/1.0/modules/content/" 
-     version="2.0">
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">
   <channel>
-    <title>Chandamama Moonlight Stories — Telugu</title>
+    <title>Chandamama — Telugu</title>
     <link>https://bugsbunnyla.github.io/chandamama-podcast/languages/te.html</link>
     <language>te</language>
-    <description>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in Telugu for children ages 4-12. Free, forever.</description>
-    <itunes:author>Chandamama Cultural Preservation Project</itunes:author>
-    <itunes:subtitle>Sanskrit stories for children in Telugu</itunes:subtitle>
-    <itunes:summary>Ancient Sanskrit children's tales from the December 1999 Chandamama magazine, retold in Telugu for children ages 4-12. Each episode features culturally-rooted storytelling, gentle music, and interactive moments for young listeners.</itunes:summary>
-    <itunes:owner>
-      <itunes:name>Chandamama Project</itunes:name>
-      <itunes:email>hello@chandamama-stories.org</itunes:email>
-    </itunes:owner>
-    <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-te.jpg"/>
-    <itunes:category text="Kids &amp; Family">
-      <itunes:category text="Stories for Kids"/>
-    </itunes:category>
-    <itunes:category text="Education">
-      <itunes:category text="Language Learning"/>
-    </itunes:category>
-    <itunes:explicit>no</itunes:explicit>
-    <itunes:type>episodic</itunes:type>
+    <copyright>CC BY-SA 4.0</copyright>
+    <itunes:author>Chandamama Moonlight Stories</itunes:author>
+    <itunes:summary>Ancient Sanskrit tales retold as enacted multi-cast podcasts for children.</itunes:summary>
+    <description>Ancient Sanskrit tales retold as enacted multi-cast podcasts for children.</description>
+    <itunes:owner><itunes:name>Chandamama</itunes:name><itunes:email>hello@chandamama.example</itunes:email></itunes:owner>
+    <itunes:category text="Kids &amp; Family"/><itunes:category text="Fiction"/>
     <item>
-      <title>చందమామకు స్వాగతం</title>
-      <description>చందమామ కథల ఇంటికి మీకు స్వాగతం. బొమ్మలాట కథాకారుడు మీకు కథలు చెబుతాడు.</description>
-      <enclosure url="https://archive.org/download/chandamama-telugu-ep00/chandamama-te-ep00-welcome.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/te.xml#chandamama-te-ep00-welcome</guid>
-      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
-      <itunes:duration>8:00</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-te.jpg"/>
-      <itunes:category text="Kids &amp; Family">
-        <itunes:category text="Stories for Kids"/>
-      </itunes:category>
+      <title>Welcome to Chandamama — Uncle Moonbeam's Story House</title>
+      <itunes:author>Uncle Moonbeam</itunes:author>
+      <itunes:subtitle>A warm introduction to the magical world of Chandamama</itunes:subtitle>
+      <itunes:summary>Meet Uncle Moonbeam and discover the history of the Chandamama magazine.</itunes:summary>
+      <enclosure url="https://bugsbunnyla.github.io/chandamama-podcast/audio/te/ep00.mp3" length="28394" type="audio/mpeg"/>
+      <guid>chandamama-te-ep00</guid>
+      <pubDate>Fri, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>12:00</itunes:duration>
+      <itunes:episode>0</itunes:episode><itunes:season>1</itunes:season>
     </item>
     <item>
-      <title>రాజు మరియు రాణి — ఒక రాజసీ కథ</title>
-      <description>1999 డిసెంబర్ ముఖచిత్రం నుండి: ఒక రాజు దూరంగా చూపిస్తున్నాడు. అతని రాణి ఆశ్చర్యంగా వింటోంది.</description>
-      <enclosure url="https://archive.org/download/chandamama-telugu-ep01/chandamama-te-ep01-royal.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/te.xml#chandamama-te-ep01-royal</guid>
-      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
-      <itunes:duration>15:00</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-te.jpg"/>
-      <itunes:category text="Kids &amp; Family">
-        <itunes:category text="Stories for Kids"/>
-      </itunes:category>
+      <title>The King and the Queen — The Lamp of Dharma</title>
+      <itunes:author>Chandamama Cast</itunes:author>
+      <itunes:subtitle>King Vikramaditya sees a mystery beyond the seven hills.</itunes:subtitle>
+      <itunes:summary>A royal mystery enacted by six characters with scene-changing backgrounds.</itunes:summary>
+      <enclosure url="https://bugsbunnyla.github.io/chandamama-podcast/audio/te/ep01.mp3" length="31881" type="audio/mpeg"/>
+      <guid>chandamama-te-ep01</guid>
+      <pubDate>Fri, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>22:00</itunes:duration>
+      <itunes:episode>1</itunes:episode><itunes:season>1</itunes:season>
     </item>
     <item>
-      <title>డా. రాబిట్ పజిల్</title>
-      <description>స్మితను డెంటిస్ట్ వద్దకు మేజికల్ మేజ్ ద్వారా తీసుకెళ్ళండి!</description>
-      <enclosure url="https://archive.org/download/chandamama-telugu-ep02/chandamama-te-ep02-rabbit.mp3" length="0" type="audio/mpeg"/>
-      <guid>https://bugsbunnyla.github.io/chandamama-podcast/rss/te.xml#chandamama-te-ep02-rabbit</guid>
-      <pubDate>Sun, 01 Dec 1999 00:00:00 GMT</pubDate>
-      <itunes:duration>10:00</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-      <itunes:image href="https://bugsbunnyla.github.io/chandamama-podcast/assets/images/cover-te.jpg"/>
-      <itunes:category text="Kids &amp; Family">
-        <itunes:category text="Stories for Kids"/>
-      </itunes:category>
+      <title>Dr. Rabbit's Puzzle — The Maze of Friendship</title>
+      <itunes:author>Chandamama Cast</itunes:author>
+      <itunes:subtitle>Help Smita find her way through the magical maze!</itunes:subtitle>
+      <itunes:summary>A fun interactive story about kindness, bravery, and helping friends.</itunes:summary>
+      <enclosure url="https://bugsbunnyla.github.io/chandamama-podcast/audio/te/ep02.mp3" length="29727" type="audio/mpeg"/>
+      <guid>chandamama-te-ep02</guid>
+      <pubDate>Fri, 01 Dec 1999 00:00:00 GMT</pubDate>
+      <itunes:duration>18:00</itunes:duration>
+      <itunes:episode>2</itunes:episode><itunes:season>1</itunes:season>
     </item>
   </channel>
 </rss>

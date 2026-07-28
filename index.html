@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chandamama Moonlight Stories — Free Children's Podcast</title>
-  <meta name="description" content="Ancient Sanskrit tales retold as free multi-cast podcasts in 8 languages for children everywhere.">
+  <meta name="description" content="Ancient Sanskrit tales retold as enacted multi-cast podcasts in 8 languages for children everywhere.">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
   <div class="stars-bg"></div>
   <div class="shooting-star" style="animation-delay: 0s;"></div>
-  <div class="shooting-star" style="animation-delay: 3s; top: 40%;"></div>
-  <div class="shooting-star" style="animation-delay: 5s; top: 60%;"></div>
+  <div class="shooting-star" style="animation-delay: 4s; top: 35%;"></div>
+  <div class="shooting-star" style="animation-delay: 7s; top: 55%;"></div>
 
   <header class="hero">
     <div class="moon">
@@ -30,24 +30,47 @@
     </div>
   </header>
 
+  
+    <!-- Auto-Process PDF -->
+    <section style="background: linear-gradient(135deg, rgba(244,208,63,0.08), rgba(19,136,8,0.05)); border: 2px dashed rgba(244,208,63,0.3); border-radius: var(--radius); padding: 32px; text-align: center;">
+      <h2 style="color: var(--moon-gold); margin-bottom: 10px;">📄 Auto-Process Any PDF</h2>
+      <p style="color: rgba(255,255,255,0.65); max-width: 600px; margin: 0 auto 20px; line-height: 1.6;">
+        Paste a PDF URL and the app will extract, parse, and dramatize it instantly — right in your browser. No server needed.
+      </p>
+      <div style="display: flex; gap: 10px; max-width: 700px; margin: 0 auto; flex-wrap: wrap; justify-content: center;">
+        <input type="text" id="pdfUrlInput" placeholder="Paste PDF URL here..." 
+          value="https://ia902802.us.archive.org/10/items/Chandamama_Sanskrit_1999/1999December.pdf"
+          style="flex: 1; min-width: 280px; padding: 14px 18px; border-radius: 28px; border: 2px solid rgba(255,255,255,0.15); 
+                 background: rgba(0,0,0,0.3); color: #fff; font-size: 0.95rem; font-family: inherit; outline: none;">
+        <button onclick="processPDF()" class="btn-primary" id="processBtn" style="border: none;">
+          🚀 Process & Play
+        </button>
+      </div>
+      <div class="status-msg info show" id="pdfStatus" style="margin-top: 16px; display: none;">
+        Ready to process. Click the button above.
+      </div>
+      <p style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 14px;">
+        Works with any PDF URL. For Archive.org links, use the direct download URL.
+        <br>Processing happens entirely in your browser — no data leaves your device.
+      </p>
+    </section>
+
   <main>
-    <!-- Featured Episode -->
     <section>
       <h2>🌟 Featured Episode</h2>
       <p class="section-desc">Step into the theater. Each character speaks in their own voice.</p>
-
       <div class="featured-episode">
         <div class="featured-header">
           <span class="featured-art">👑</span>
           <div class="featured-meta">
-            <h3>The King and the Queen — A Royal Mystery</h3>
-            <p>Episode 1 · 15 min · Ages 7–9 · 4 Characters</p>
+            <h3>The King and the Queen — The Lamp of Dharma</h3>
+            <p>Episode 1 · 22 min · Ages 7–12 · 6 Characters · 5 Scenes</p>
           </div>
         </div>
-        <p style="color: rgba(255,255,255,0.75); line-height: 1.7;">
-          From the cover of the December 1999 issue: King Vikramaditya sees a mysterious golden light beyond the seven hills. 
-          Is it the legendary Lamp of Dharma? Join the King, Queen Ananya, and Minister Gopal in this royal mystery 
-          enacted by a full cast of voices.
+        <p style="color: rgba(255,255,255,0.7); line-height: 1.7;">
+          King Vikramaditya sees a mysterious golden light beyond the seven hills. Is it the legendary Lamp of Dharma? 
+          Join the King, Queen Ananya, Minister Gopal, Captain Veer, and the Old Sage in this royal mystery 
+          enacted by a full cast of voices with scene-changing backgrounds.
         </p>
         <div class="featured-actions">
           <a href="languages/en.html" class="btn-primary">🎭 Enter Theater</a>
@@ -56,105 +79,38 @@
       </div>
     </section>
 
-    <!-- Languages -->
-    <section class="language-grid">
+    <section>
       <h2>Choose Your Language</h2>
-      <p class="section-desc">Every story is adapted by native speakers, with culturally-rooted voices and music. Select a language to explore episodes.</p>
-
+      <p class="section-desc">Every story is adapted by native speakers. Select a language to explore episodes.</p>
       <div class="grid">
-        <a href="languages/en.html" class="lang-card">
-          <span class="flag">🇬🇧</span>
-          <span class="lang-name">English</span>
-          <span class="lang-native">English</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
-        <a href="languages/te.html" class="lang-card">
-          <span class="flag">🇮🇳</span>
-          <span class="lang-name">Telugu</span>
-          <span class="lang-native">తెలుగు</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
-        <a href="languages/hi.html" class="lang-card">
-          <span class="flag">🇮🇳</span>
-          <span class="lang-name">Hindi</span>
-          <span class="lang-native">हिन्दी</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
-        <a href="languages/zh.html" class="lang-card">
-          <span class="flag">🇨🇳</span>
-          <span class="lang-name">Chinese</span>
-          <span class="lang-native">中文</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
-        <a href="languages/es.html" class="lang-card">
-          <span class="flag">🇪🇸</span>
-          <span class="lang-name">Spanish</span>
-          <span class="lang-native">Español</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
-        <a href="languages/it.html" class="lang-card">
-          <span class="flag">🇮🇹</span>
-          <span class="lang-name">Italian</span>
-          <span class="lang-native">Italiano</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
-        <a href="languages/de.html" class="lang-card">
-          <span class="flag">🇩🇪</span>
-          <span class="lang-name">German</span>
-          <span class="lang-native">Deutsch</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
-        <a href="languages/fr.html" class="lang-card">
-          <span class="flag">🇫🇷</span>
-          <span class="lang-name">French</span>
-          <span class="lang-native">Français</span>
-          <span class="ep-count">3 episodes</span>
-        </a>
+        <a href="languages/en.html" class="lang-card"><span class="flag">🇬🇧</span><span class="lang-name">English</span><span class="lang-native">English</span><span class="ep-count">3 episodes</span></a>
+        <a href="languages/te.html" class="lang-card"><span class="flag">🇮🇳</span><span class="lang-name">Telugu</span><span class="lang-native">తెలుగు</span><span class="ep-count">3 episodes</span></a>
+        <a href="languages/hi.html" class="lang-card"><span class="flag">🇮🇳</span><span class="lang-name">Hindi</span><span class="lang-native">हिन्दी</span><span class="ep-count">3 episodes</span></a>
+        <a href="languages/zh.html" class="lang-card"><span class="flag">🇨🇳</span><span class="lang-name">Chinese</span><span class="lang-native">中文</span><span class="ep-count">3 episodes</span></a>
+        <a href="languages/es.html" class="lang-card"><span class="flag">🇪🇸</span><span class="lang-name">Spanish</span><span class="lang-native">Español</span><span class="ep-count">3 episodes</span></a>
+        <a href="languages/it.html" class="lang-card"><span class="flag">🇮🇹</span><span class="lang-name">Italian</span><span class="lang-native">Italiano</span><span class="ep-count">3 episodes</span></a>
+        <a href="languages/de.html" class="lang-card"><span class="flag">🇩🇪</span><span class="lang-name">German</span><span class="lang-native">Deutsch</span><span class="ep-count">3 episodes</span></a>
+        <a href="languages/fr.html" class="lang-card"><span class="flag">🇫🇷</span><span class="lang-name">French</span><span class="lang-native">Français</span><span class="ep-count">3 episodes</span></a>
       </div>
     </section>
 
-    <!-- Cast -->
     <section>
       <h2>🎭 The Cast</h2>
-      <p class="section-desc">Meet the characters who bring these ancient tales to life. Each voice is unique.</p>
-
+      <p class="section-desc">Meet the characters who bring these ancient tales to life.</p>
       <div class="cast-grid">
-        <div class="cast-card">
-          <span class="cast-emoji">🌙</span>
-          <div class="cast-name">Uncle Moonbeam</div>
-          <div class="cast-role">Narrator & Host</div>
-        </div>
-        <div class="cast-card">
-          <span class="cast-emoji">🤴</span>
-          <div class="cast-name">King Vikramaditya</div>
-          <div class="cast-role">The Wise King</div>
-        </div>
-        <div class="cast-card">
-          <span class="cast-emoji">👸</span>
-          <div class="cast-name">Queen Ananya</div>
-          <div class="cast-role">The Curious Queen</div>
-        </div>
-        <div class="cast-card">
-          <span class="cast-emoji">📜</span>
-          <div class="cast-name">Minister Gopal</div>
-          <div class="cast-role">Royal Advisor</div>
-        </div>
-        <div class="cast-card">
-          <span class="cast-emoji">👧</span>
-          <div class="cast-name">Smita</div>
-          <div class="cast-role">The Brave Girl</div>
-        </div>
-        <div class="cast-card">
-          <span class="cast-emoji">🐰</span>
-          <div class="cast-name">Dr. Rabbit</div>
-          <div class="cast-role">The Wise Dentist</div>
-        </div>
+        <div class="cast-card"><span class="cast-emoji">🌙</span><div class="cast-name">Uncle Moonbeam</div><div class="cast-role">Narrator & Host</div></div>
+        <div class="cast-card"><span class="cast-emoji">🤴</span><div class="cast-name">King Vikramaditya</div><div class="cast-role">The Wise King</div></div>
+        <div class="cast-card"><span class="cast-emoji">👸</span><div class="cast-name">Queen Ananya</div><div class="cast-role">The Curious Queen</div></div>
+        <div class="cast-card"><span class="cast-emoji">📜</span><div class="cast-name">Minister Gopal</div><div class="cast-role">Royal Advisor</div></div>
+        <div class="cast-card"><span class="cast-emoji">⚔️</span><div class="cast-name">Captain Veer</div><div class="cast-role">Head of the Guard</div></div>
+        <div class="cast-card"><span class="cast-emoji">🧙</span><div class="cast-name">Old Sage</div><div class="cast-role">Forest Hermit</div></div>
+        <div class="cast-card"><span class="cast-emoji">👧</span><div class="cast-name">Smita</div><div class="cast-role">The Brave Girl</div></div>
+        <div class="cast-card"><span class="cast-emoji">🐰</span><div class="cast-name">Dr. Rabbit</div><div class="cast-role">The Wise Dentist</div></div>
       </div>
     </section>
 
-    <!-- About -->
     <section class="about">
-      <h2 style="color:var(--moon-gold); text-align:center; margin-bottom:20px;">About Chandamama</h2>
+      <h2 style="color:var(--moon-gold); text-align:center; margin-bottom:18px;">About Chandamama</h2>
       <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
       <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
       <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as enacted multi-cast podcasts with interactive transcripts, in 8 languages, for children everywhere.</p>
@@ -171,5 +127,56 @@
 
   <script src="assets/js/theater.js"></script>
   <script src="assets/js/player.js"></script>
+  <script src="assets/js/pdf-processor.js"></script>
+  <script>
+    function showProcessing(text, sub) {
+      document.getElementById("processingText").textContent = text || "Processing...";
+      document.getElementById("processingSub").textContent = sub || "";
+      document.getElementById("processingOverlay").classList.add("active");
+    }
+    function hideProcessing() {
+      document.getElementById("processingOverlay").classList.remove("active");
+    }
+
+    // Hook into PDF processor status updates
+    const origUpdate = PDFAutoProcessor.prototype.updateStatus;
+    PDFAutoProcessor.prototype.updateStatus = function(msg, type) {
+      origUpdate.call(this, msg, type);
+      const overlayText = document.getElementById("processingText");
+      if (overlayText && document.getElementById("processingOverlay").classList.contains("active")) {
+        overlayText.textContent = msg;
+      }
+    };
+
+    async function processPDF() {
+      const url = document.getElementById("pdfUrlInput").value.trim();
+      if (!url) { alert("Please paste a PDF URL"); return; }
+
+      showProcessing("Loading PDF...", url.substring(0, 60) + "...");
+
+      try {
+        const story = await window.pdfProcessor.process(url);
+        hideProcessing();
+        if (story && story.episodes.length > 0) {
+          window.theater.story = story;
+          window.theater.startEpisode(story.episodes[0].id);
+        }
+      } catch (e) {
+        hideProcessing();
+        console.error(e);
+        document.getElementById("pdfStatus").textContent = 
+          "❌ Failed: " + (e.message || "Could not process PDF. The server may block CORS. Try: (1) Download the PDF to your computer, (2) Upload to Google Drive and get a direct link, or (3) Use a CORS proxy.");
+        document.getElementById("pdfStatus").className = "status-msg show err";
+      }
+    }
+  </script>
+
+  <!-- Processing Overlay -->
+  <div class="processing-overlay" id="processingOverlay">
+    <div class="processing-spinner"></div>
+    <div class="processing-text" id="processingText">Loading PDF...</div>
+    <div class="processing-sub" id="processingSub">This happens in your browser</div>
+  </div>
+
 </body>
 </html>
