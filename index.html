@@ -573,8 +573,16 @@ voices, portraits, and stage lighting.</div>
       } catch (e) { console.warn(label + " failed:", e.message); }
     }
 
-    setStatus("🚫 All fetch methods failed.", "error");
-    alert("Could not load PDF from URL.\n\nAll proxies returned errors.\n\n✅ RECOMMENDED: Upload the PDF file directly\n   Click the green Upload button and select the PDF.");
+    setStatus("🚫 URL blocked. Use Upload instead.", "error");
+    const useUpload = confirm(
+      "This website blocks all proxy access.\n\n" +
+      "✅ SOLUTION: Upload the PDF file directly\n" +
+      "   (works instantly, no CORS issues)\n\n" +
+      "Click OK to open the file picker now."
+    );
+    if (useUpload) {
+      document.getElementById("file-input").click();
+    }
   }
 
   function parseStory() {
