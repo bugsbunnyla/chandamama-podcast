@@ -99,120 +99,324 @@ class TextSanitizer {
   }
 }
 
-// ======================= TRANSLATION ENGINE =======================
-class TranslationEngine {
-  constructor() {
-    this.cache = this.loadCache();
-    this.queue = [];
-    this.processing = false;
-    this.delay = CONFIG.translateDelay;
-    this.stats = { translated: 0, cached: 0, failed: 0 };
+// ======================= TRANSLATION CACHE (LRU, persistent) =======================
+class TranslationCache {
+  constructor(maxSize = 5000, maxAgeDays = 30) {
+    this.key = 'cm_translate_cache_v23';
+    this.metaKey = 'cm_translate_cache_meta_v23';
+    this.maxSize = maxSize;
+    this.maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
+    this.data = this.load();
+    this.meta = this.loadMeta();
   }
-
-  loadCache() {
-    try { return JSON.parse(localStorage.getItem(CONFIG.translateCacheKey) || '{}'); }
-    catch(e) { return {}; }
-  }
-  saveCache() {
-    try { localStorage.setItem(CONFIG.translateCacheKey, JSON.stringify(this.cache)); }
-    catch(e) { /* quota exceeded */ }
-  }
-  hash(text) {
-    let h = 0;
-    for (let i = 0; i < text.length; i++) {
-      h = ((h << 5) - h) + text.charCodeAt(i);
+  hash(text, source, target) {
+    let h = 5381;
+    const str = String(text) + '|' + source + '|' + target;
+    for (let i = 0; i < str.length; i++) {
+      h = ((h << 5) + h) + str.charCodeAt(i);
       h |= 0;
     }
-    return 'h' + Math.abs(h).toString(36);
+    return 't_' + Math.abs(h).toString(36);
   }
-
-  async translate(text, targetLang = 'te', sourceLang = 'Autodetect') {
-    if (!text || !text.trim()) return '';
-    const clean = TextSanitizer.cleanPDFText(text);
-    const chunks = TextSanitizer.chunkForTranslation(clean, CONFIG.maxChunkLength);
-    const results = [];
-    for (const chunk of chunks) {
-      const key = this.hash(chunk + '|' + sourceLang + '|' + targetLang);
-      if (this.cache[key]) {
-        this.stats.cached++;
-        results.push(this.cache[key]);
-        continue;
-      }
-      const r = await this.translateChunk(chunk, targetLang, sourceLang, key);
-      results.push(r);
+  get(text, source, target) {
+    const key = this.hash(text, source, target);
+    const entry = this.data[key];
+    if (!entry) return null;
+    if (Date.now() - entry.t > this.maxAge) {
+      delete this.data[key]; delete this.meta[key];
+      return null;
     }
-    return results.join(' ');
+    this.meta[key] = Date.now();
+    return entry.v;
   }
+  set(text, source, target, value) {
+    const key = this.hash(text, source, target);
+    const keys = Object.keys(this.data);
+    if (keys.length >= this.maxSize) {
+      let oldest = keys[0], oldestTime = this.meta[oldest] || 0;
+      for (const k of keys) {
+        const t = this.meta[k] || 0;
+        if (t < oldestTime) { oldestTime = t; oldest = k; }
+      }
+      delete this.data[oldest]; delete this.meta[oldest];
+    }
+    this.data[key] = { v: value, t: Date.now() };
+    this.meta[key] = Date.now();
+    this.save();
+  }
+  load() { try { return JSON.parse(localStorage.getItem(this.key) || '{}'); } catch(e) { return {}; } }
+  loadMeta() { try { return JSON.parse(localStorage.getItem(this.metaKey) || '{}'); } catch(e) { return {}; } }
+  save() {
+    try {
+      localStorage.setItem(this.key, JSON.stringify(this.data));
+      localStorage.setItem(this.metaKey, JSON.stringify(this.meta));
+    } catch(e) { this.evictHalf(); }
+  }
+  evictHalf() {
+    const keys = Object.keys(this.data);
+    keys.sort((a, b) => (this.meta[a] || 0) - (this.meta[b] || 0));
+    for (let i = 0; i < keys.length / 2; i++) {
+      delete this.data[keys[i]]; delete this.meta[keys[i]];
+    }
+    this.save();
+  }
+  size() { return Object.keys(this.data).length; }
+  clear() { this.data = {}; this.meta = {}; this.save(); }
+}
 
-  async translateChunk(text, targetLang, sourceLang, key) {
-    return new Promise((resolve) => {
-      this.queue.push({ text, targetLang, sourceLang, key, resolve });
-      if (!this.processing) this.processQueue();
+// ======================= TRANSLATION PROVIDERS =======================
+class LibreTranslateProvider {
+  constructor() {
+    this.name = 'LibreTranslate';
+    this.mirrors = [
+      'https://libretranslate.de',
+      'https://translate.argosopentech.com',
+      'https://libretranslate.pussthecat.org',
+      'https://lt.vern.cc'
+    ];
+    this.mirrorIndex = 0;
+    this.failures = 0;
+    this.circuitOpen = false;
+    this.circuitResetAt = 0;
+    this.minDelay = 5000;
+    this.lastRequestAt = 0;
+  }
+  get baseUrl() { return this.mirrors[this.mirrorIndex]; }
+  async translate(text, targetLang, sourceLang) {
+    if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
+    this.circuitOpen = false;
+    const elapsed = Date.now() - this.lastRequestAt;
+    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 500);
+    const url = `${this.baseUrl}/translate`;
+    const body = {
+      q: text.substring(0, 1000),
+      source: sourceLang === 'Autodetect' ? 'auto' : sourceLang,
+      target: targetLang,
+      format: 'text'
+    };
+    try {
+      this.lastRequestAt = Date.now();
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (resp.status === 429) { this.failures++; this.rotateMirror(); throw new Error('429'); }
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      this.failures = 0;
+      return data.translatedText;
+    } catch (e) {
+      this.failures++;
+      if (this.failures >= 5) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 5 * 60 * 1000; }
+      throw e;
+    }
+  }
+  rotateMirror() {
+    this.mirrorIndex = (this.mirrorIndex + 1) % this.mirrors.length;
+    this.failures = Math.max(0, this.failures - 2);
+    console.log(`[LibreTranslate] Rotated to: ${this.baseUrl}`);
+  }
+  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+}
+
+class MyMemoryProvider {
+  constructor() {
+    this.name = 'MyMemory';
+    this.failures = 0;
+    this.circuitOpen = false;
+    this.circuitResetAt = 0;
+    this.minDelay = 10000;
+    this.lastRequestAt = 0;
+  }
+  async translate(text, targetLang, sourceLang) {
+    if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
+    this.circuitOpen = false;
+    const elapsed = Date.now() - this.lastRequestAt;
+    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed);
+    const sl = sourceLang === 'Autodetect' ? 'Autodetect' : sourceLang;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 350))}&langpair=${sl}|${targetLang}`;
+    try {
+      this.lastRequestAt = Date.now();
+      const resp = await fetch(url);
+      if (resp.status === 429) throw new Error('429');
+      const data = await resp.json();
+      if (data.responseData?.translatedText) { this.failures = 0; return data.responseData.translatedText; }
+      throw new Error(data.responseDetails || 'Empty');
+    } catch (e) {
+      this.failures++;
+      if (this.failures >= 3) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 10 * 60 * 1000; }
+      throw e;
+    }
+  }
+  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+}
+
+class UserKeyProvider {
+  constructor(type) {
+    this.type = type;
+    this.name = { google: 'Google Cloud', deepl: 'DeepL', azure: 'Azure Translator' }[type] || type;
+    this.failures = 0;
+    this.minDelay = 50;
+    this.lastRequestAt = 0;
+  }
+  getKey() { try { return localStorage.getItem(`cm_api_key_${this.type}`) || ''; } catch(e) { return ''; } }
+  hasKey() { return !!this.getKey(); }
+  async translate(text, targetLang, sourceLang) {
+    const key = this.getKey();
+    if (!key) throw new Error('No API key');
+    const elapsed = Date.now() - this.lastRequestAt;
+    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed);
+    this.lastRequestAt = Date.now();
+    if (this.type === 'google') return this.translateGoogle(text, targetLang, sourceLang, key);
+    if (this.type === 'deepl') return this.translateDeepL(text, targetLang, sourceLang, key);
+    if (this.type === 'azure') return this.translateAzure(text, targetLang, sourceLang, key);
+    throw new Error('Unknown provider');
+  }
+  async translateGoogle(text, targetLang, sourceLang, key) {
+    const url = `https://translation.googleapis.com/language/translate/v2?key=${key}`;
+    const body = { q: text, target: targetLang, format: 'text' };
+    if (sourceLang !== 'Autodetect') body.source = sourceLang;
+    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!resp.ok) throw new Error(`Google HTTP ${resp.status}`);
+    const data = await resp.json();
+    return data.data.translations[0].translatedText;
+  }
+  async translateDeepL(text, targetLang, sourceLang, key) {
+    const isFree = key.endsWith(':fx');
+    const url = isFree ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
+    const body = new URLSearchParams({ text: text, target_lang: targetLang.toUpperCase() });
+    if (sourceLang !== 'Autodetect') body.append('source_lang', sourceLang.toUpperCase());
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `DeepL-Auth-Key ${key}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body
+    });
+    if (!resp.ok) throw new Error(`DeepL HTTP ${resp.status}`);
+    const data = await resp.json();
+    return data.translations[0].text;
+  }
+  async translateAzure(text, targetLang, sourceLang, key) {
+    const region = localStorage.getItem('cm_api_key_azure_region') || 'global';
+    let url = `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${targetLang}`;
+    if (sourceLang !== 'Autodetect') url += `&from=${sourceLang}`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': key,
+        'Ocp-Apim-Subscription-Region': region,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify([{ Text: text }])
+    });
+    if (!resp.ok) throw new Error(`Azure HTTP ${resp.status}`);
+    const data = await resp.json();
+    return data[0].translations[0].text;
+  }
+  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+}
+
+// ======================= TRANSLATION ENGINE (Redesigned for 1M+ words) =======================
+class TranslationEngine {
+  constructor() {
+    this.cache = new TranslationCache();
+    this.stats = { translated: 0, cached: 0, failed: 0 };
+    this.providers = [
+      new LibreTranslateProvider(),
+      new MyMemoryProvider(),
+      new UserKeyProvider('google'),
+      new UserKeyProvider('deepl'),
+      new UserKeyProvider('azure')
+    ];
+    this.abortController = new AbortController();
+  }
+  get activeProviders() {
+    return this.providers.filter(p => {
+      if (p instanceof UserKeyProvider) return p.hasKey();
+      return true;
     });
   }
-
-  async processQueue() {
-    if (this.queue.length === 0) { this.processing = false; return; }
-    this.processing = true;
-    const job = this.queue.shift();
-    let result = null;
-    let lastError = null;
-
-    for (let attempt = 0; attempt < CONFIG.maxRetries; attempt++) {
-      try {
-        if (attempt > 0) await this.sleep(attempt * this.delay);
-        const safeText = job.text.substring(0, CONFIG.maxChunkLength);
-        const url = `${CONFIG.translateApi}?q=${encodeURIComponent(safeText)}&langpair=${job.sourceLang}|${job.targetLang}`;
-        const resp = await fetch(url);
-        if (resp.status === 429) {
-          console.warn('[Translate] 429 — backing off');
-          await this.sleep(this.delay * 2 * (attempt + 1));
-          continue;
-        }
-        if (resp.status === 414) {
-          console.warn('[Translate] 414 — truncating more');
-          job.text = job.text.substring(0, 250);
-          continue;
-        }
-        const data = await resp.json();
-        if (data.responseData && data.responseData.translatedText) {
-          result = data.responseData.translatedText;
-          break;
-        }
-        if (data.responseStatus && data.responseStatus !== 200) {
-          console.warn('[Translate] API status:', data.responseStatus, data.responseDetails);
-          lastError = data.responseDetails;
-        }
-      } catch (e) { 
-        lastError = e.message;
-        console.warn('[Translate] network error:', e.message);
-      }
-    }
-
-    if (!result) {
-      console.warn('[Translate] All attempts failed, using original. Last error:', lastError);
-      result = job.text;
-      this.stats.failed++;
-    } else {
-      this.stats.translated++;
-    }
-    this.cache[job.key] = result;
-    this.saveCache();
-    job.resolve(result);
-    await this.sleep(this.delay);
-    this.processQueue();
+  get bestProvider() {
+    const active = this.activeProviders;
+    const userKeys = active.filter(p => p instanceof UserKeyProvider);
+    if (userKeys.length) return userKeys[0];
+    const free = active.filter(p => !(p instanceof UserKeyProvider) && !p.circuitOpen);
+    return free[0] || active[0];
   }
-
-  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
+  get providerStatus() {
+    return this.providers.map(p => ({
+      name: p.name,
+      available: p instanceof UserKeyProvider ? p.hasKey() : !p.circuitOpen,
+      circuitOpen: p.circuitOpen || false,
+      failures: p.failures || 0
+    }));
+  }
+  async translate(text, targetLang = 'te', sourceLang = 'Autodetect') {
+    if (!text || !text.trim()) return '';
+    const cached = this.cache.get(text, sourceLang, targetLang);
+    if (cached !== null) { this.stats.cached++; return cached; }
+    const clean = TextSanitizer.cleanPDFText(text);
+    const chunks = TextSanitizer.chunkForTranslation(clean, 400);
+    const results = [];
+    for (const chunk of chunks) {
+      if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
+      const cc = this.cache.get(chunk, sourceLang, targetLang);
+      if (cc !== null) { this.stats.cached++; results.push(cc); continue; }
+      let translated = null, lastError = null;
+      for (const provider of this.activeProviders) {
+        if (provider.circuitOpen && Date.now() < provider.circuitResetAt) continue;
+        try {
+          translated = await provider.translate(chunk, targetLang, sourceLang);
+          this.stats.translated++;
+          break;
+        } catch (e) {
+          lastError = e.message;
+          console.warn(`[Translate] ${provider.name} failed:`, e.message);
+        }
+      }
+      if (translated === null) {
+        console.warn('[Translate] All providers failed. Using original. Last error:', lastError);
+        this.stats.failed++;
+        translated = chunk;
+      }
+      this.cache.set(chunk, sourceLang, targetLang, translated);
+      results.push(translated);
+    }
+    const result = results.join(' ');
+    this.cache.set(text, sourceLang, targetLang, result);
+    return result;
+  }
   async translateBatch(lines, targetLang = 'te', sourceLang = 'Autodetect', onProgress = null) {
     const results = [];
+    let cachedCount = 0;
+    for (const line of lines) {
+      if (this.cache.get(line, sourceLang, targetLang) !== null) cachedCount++;
+    }
+    const networkTotal = lines.length - cachedCount;
+    let networkDone = 0;
     for (let i = 0; i < lines.length; i++) {
+      if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
       const r = await this.translate(lines[i], targetLang, sourceLang);
       results.push(r);
-      if (onProgress) onProgress(i + 1, lines.length);
+      if (this.cache.get(lines[i], sourceLang, targetLang) === r && cachedCount > 0) {
+        // cached
+      } else {
+        networkDone++;
+      }
+      if (onProgress) onProgress(i + 1, lines.length, networkDone, networkTotal);
     }
     return results;
+  }
+  cancel() {
+    this.abortController.abort();
+    this.abortController = new AbortController();
+  }
+  clearCache() {
+    this.cache.clear();
+    this.stats = { translated: 0, cached: 0, failed: 0 };
+  }
+  getCacheStats() {
+    return { size: this.cache.size(), ...this.stats };
   }
 }
 
@@ -688,6 +892,8 @@ class ChandamamaApp {
     this.bindEvents();
     this.renderLanguageCards();
     this.setLanguage('te');
+    this.renderSettings();
+    this.renderSettingsButton();
   }
 
   bindEvents() {
@@ -880,35 +1086,59 @@ class ChandamamaApp {
     const textDiv = document.getElementById('translatedText');
     panel.style.display = 'block';
     const texts = this.currentStory.lines.map(l => l.text);
-    const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect', (done, total) => {
-      if (fill) fill.style.width = (done / total * 100) + '%';
-      if (textDiv) textDiv.textContent = `Translating ${done}/${total} lines... (cached: ${Translator.stats.cached}, failed: ${Translator.stats.failed})`;
-    });
-    this.currentStory.lines.forEach((l, i) => { l.translated = translated[i]; });
-    if (textDiv) {
-      textDiv.innerHTML = this.currentStory.lines.slice(0, 50).map((l, i) => 
-        `<div class="trans-line"><b>${this.escapeHtml(l.speaker)}:</b> ${this.escapeHtml(l.translated || l.text)}</div>`
-      ).join('') + (this.currentStory.lines.length > 50 ? `<div style="color:rgba(255,255,255,0.5)">... ${this.currentStory.lines.length - 50} more lines translated ...</div>` : '');
+    const statsBefore = Translator.getCacheStats();
+    try {
+      const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect', (done, total, netDone, netTotal) => {
+        if (fill) fill.style.width = (done / total * 100) + '%';
+        if (textDiv) {
+          const prov = Translator.bestProvider?.name || '...';
+          textDiv.textContent = `Translating ${done}/${total} lines... Provider: ${prov} | Network: ${netDone}/${netTotal} | Cache: ${Translator.stats.cached}`;
+        }
+      });
+      this.currentStory.lines.forEach((l, i) => { l.translated = translated[i]; });
+      const statsAfter = Translator.getCacheStats();
+      if (textDiv) {
+        textDiv.innerHTML = this.currentStory.lines.slice(0, 50).map((l, i) => 
+          `<div class="trans-line"><b>${this.escapeHtml(l.speaker)}:</b> ${this.escapeHtml(l.translated || l.text)}</div>`
+        ).join('') + (this.currentStory.lines.length > 50 ? `<div style="color:rgba(255,255,255,0.5)">... ${this.currentStory.lines.length - 50} more lines ...</div>` : '') +
+        `<div style="margin-top:8px;color:#4ade80;font-size:12px;">✓ Done. Cache: ${statsAfter.size} entries (${statsAfter.cached} hits, ${statsAfter.translated} new, ${statsAfter.failed} fails)</div>`;
+      }
+    } catch (e) {
+      if (textDiv) textDiv.innerHTML = `<div style="color:#f87171;">Translation stopped: ${e.message}</div>`;
     }
     if (fill) fill.style.width = '100%';
   }
 
   async translateAllStories() {
     const status = document.getElementById('pdfStatus');
-    if (status) status.textContent = 'Translating all stories... This may take several minutes.';
+    const totalLines = this.stories.reduce((a, s) => a + (s.sentences?.length || 0), 0);
+    if (totalLines > 5000) {
+      const hasKey = Translator.activeProviders.some(p => p instanceof UserKeyProvider);
+      if (!hasKey) {
+        const go = confirm(`WARNING: You are about to translate ~${totalLines} lines without a paid API key. Free providers will rate-limit heavily and this may take hours or fail entirely.\n\nFor 1M+ words, you MUST add a Google Cloud, DeepL, or Azure API key in Settings.\n\nClick OK to proceed anyway (very slow), or Cancel to open Settings.`);
+        if (!go) { this.openSettings(); return; }
+      }
+    }
+    if (status) status.textContent = `Translating ${this.stories.length} stories (~${totalLines} lines)...`;
+    Translator.cancel();
     for (let i = 0; i < this.stories.length; i++) {
       this.currentStory = this.stories[i];
-      // Build lines if not already built
       if (!this.currentStory.lines) {
         const sentences = this.currentStory.sentences || [];
         this.currentStory.lines = sentences.map(text => ({ speaker: 'Narrator', text, original: text }));
       }
       const texts = this.currentStory.lines.map(l => l.text);
-      const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect');
-      this.currentStory.lines.forEach((l, idx) => { l.translated = translated[idx]; });
-      if (status) status.textContent = `Translated story ${i+1}/${this.stories.length}: ${this.currentStory.title}`;
+      try {
+        const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect', (done, total) => {
+          if (status) status.textContent = `Story ${i+1}/${this.stories.length}: ${this.currentStory.title} — line ${done}/${total}`;
+        });
+        this.currentStory.lines.forEach((l, idx) => { l.translated = translated[idx]; });
+      } catch (e) {
+        if (status) status.textContent = `Stopped at story ${i+1}: ${e.message}`;
+        return;
+      }
     }
-    if (status) status.textContent = `All ${this.stories.length} stories translated to ${this.lang.toUpperCase()}!`;
+    if (status) status.textContent = `All ${this.stories.length} stories translated! Cache: ${Translator.getCacheStats().size} entries`;
     this.renderStorySelector();
   }
 
@@ -926,6 +1156,109 @@ class ChandamamaApp {
     window.theater.loadScript(script, this.lang);
     window.theater.open();
     window.theater.play();
+  }
+
+  renderSettings() {
+    const existing = document.getElementById('cmSettingsPanel');
+    if (existing) return;
+    const panel = document.createElement('div');
+    panel.id = 'cmSettingsPanel';
+    panel.style.cssText = 'display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e1b4b;border:1px solid #4c1d95;border-radius:12px;padding:24px;max-width:420px;width:90%;z-index:10000;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.6);font-family:sans-serif;';
+    panel.innerHTML = `
+      <h3 style="margin:0 0 16px;color:#c084fc;">⚙️ Translation Settings</h3>
+      <p style="font-size:12px;color:#a78bfa;margin:0 0 12px;">For 1,000+ lines, add a paid API key. Free providers rate-limit heavily.</p>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">Google Cloud API Key</label>
+        <input type="password" id="cmKeyGoogle" placeholder="AIza..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">DeepL API Key</label>
+        <input type="password" id="cmKeyDeepL" placeholder="DeepL-Auth-Key ..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">Azure Translator Key</label>
+        <input type="password" id="cmKeyAzure" placeholder="..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">Azure Region (e.g. global, westus2)</label>
+        <input type="text" id="cmKeyAzureRegion" placeholder="global" style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:#c4b5fd;margin-bottom:4px;">Provider Status</div>
+        <div id="cmProviderStatus" style="font-size:12px;color:#a78bfa;line-height:1.6;"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="app.saveSettings()" style="flex:1;padding:10px;background:#7c3aed;border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;">Save Keys</button>
+        <button onclick="app.clearCache()" style="padding:10px;background:#374151;border:none;border-radius:6px;color:#fff;cursor:pointer;">Clear Cache</button>
+        <button onclick="document.getElementById('cmSettingsPanel').style.display='none'" style="padding:10px;background:#374151;border:none;border-radius:6px;color:#fff;cursor:pointer;">Close</button>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    this.loadSettings();
+  }
+
+  renderSettingsButton() {
+    const btn = document.createElement('button');
+    btn.textContent = '⚙️ Settings';
+    btn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;padding:10px 16px;background:#7c3aed;border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+    btn.onclick = () => this.openSettings();
+    document.body.appendChild(btn);
+  }
+
+  openSettings() {
+    const panel = document.getElementById('cmSettingsPanel');
+    if (panel) { this.updateProviderStatusUI(); panel.style.display = 'block'; }
+  }
+
+  updateProviderStatusUI() {
+    const div = document.getElementById('cmProviderStatus');
+    if (!div) return;
+    const status = Translator.providerStatus;
+    div.innerHTML = status.map(s => {
+      const color = s.available ? '#4ade80' : '#f87171';
+      const note = s.circuitOpen ? ' (circuit open)' : '';
+      return `<div>● <span style="color:${color}">${s.name}</span>${note} — fails: ${s.failures}</div>`;
+    }).join('');
+  }
+
+  loadSettings() {
+    const g = localStorage.getItem('cm_api_key_google') || '';
+    const d = localStorage.getItem('cm_api_key_deepl') || '';
+    const a = localStorage.getItem('cm_api_key_azure') || '';
+    const r = localStorage.getItem('cm_api_key_azure_region') || 'global';
+    const elG = document.getElementById('cmKeyGoogle');
+    const elD = document.getElementById('cmKeyDeepL');
+    const elA = document.getElementById('cmKeyAzure');
+    const elR = document.getElementById('cmKeyAzureRegion');
+    if (elG) elG.value = g;
+    if (elD) elD.value = d;
+    if (elA) elA.value = a;
+    if (elR) elR.value = r;
+  }
+
+  saveSettings() {
+    const g = document.getElementById('cmKeyGoogle')?.value.trim() || '';
+    const d = document.getElementById('cmKeyDeepL')?.value.trim() || '';
+    const a = document.getElementById('cmKeyAzure')?.value.trim() || '';
+    const r = document.getElementById('cmKeyAzureRegion')?.value.trim() || 'global';
+    if (g) localStorage.setItem('cm_api_key_google', g); else localStorage.removeItem('cm_api_key_google');
+    if (d) localStorage.setItem('cm_api_key_deepl', d); else localStorage.removeItem('cm_api_key_deepl');
+    if (a) localStorage.setItem('cm_api_key_azure', a); else localStorage.removeItem('cm_api_key_azure');
+    localStorage.setItem('cm_api_key_azure_region', r);
+    this.updateProviderStatusUI();
+    alert('Settings saved. Paid providers will now be used.');
+  }
+
+  clearCache() {
+    Translator.clearCache();
+    this.updateProviderStatusUI();
+    alert('Translation cache cleared.');
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   downloadScript() {
