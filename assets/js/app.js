@@ -166,11 +166,7 @@ class TranslationCache {
 
 // ======================= TRANSLATION PROVIDERS =======================
 
-/*
-  ROBUST TRANSLATION PIPELINE
-  Priority: Google (free, CORS) → Lingva (proxy) → MyMemory → LibreTranslate → User keys
-  Each provider has circuit-breaker protection and exponential backoff.
-*/
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 class GoogleTranslateFreeProvider {
   constructor() {
@@ -178,36 +174,41 @@ class GoogleTranslateFreeProvider {
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 400;
+    this.minDelay = 800;
     this.lastRequestAt = 0;
+    this.maxRetries = 3;
   }
 
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
-    const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 200);
-
     const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text.substring(0, 2000))}`;
-
-    try {
-      this.lastRequestAt = Date.now();
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      if (data && Array.isArray(data[0]) && data[0].length > 0) {
+    const q = encodeURIComponent(text.substring(0, 1800));
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${targetLang}&dt=t&q=${q}`;
+    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+      const elapsed = Date.now() - this.lastRequestAt;
+      const wait = this.minDelay * (attempt + 1) + Math.random() * 400;
+      if (elapsed < wait) await sleep(wait - elapsed);
+      try {
+        this.lastRequestAt = Date.now();
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!data || !Array.isArray(data[0]) || data[0].length === 0) throw new Error('Empty response');
+        const result = data[0].map(item => item[0]).join('');
+        if (!result || result === text) throw new Error('Same text returned');
         this.failures = 0;
-        return data[0].map(item => item[0]).join('');
+        return result;
+      } catch (e) {
+        console.warn(`[GoogleTranslateFree] Attempt ${attempt + 1} failed:`, e.message);
+        if (attempt === this.maxRetries - 1) {
+          this.failures++;
+          if (this.failures >= 6) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 3 * 60 * 1000; }
+          throw e;
+        }
       }
-      throw new Error('Empty response');
-    } catch (e) {
-      this.failures++;
-      if (this.failures >= 8) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 3 * 60 * 1000; }
-      throw e;
     }
   }
-  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
 
 class LingvaProvider {
@@ -216,33 +217,40 @@ class LingvaProvider {
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 800;
+    this.minDelay = 1000;
     this.lastRequestAt = 0;
+    this.maxRetries = 2;
   }
 
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
-    const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 300);
-
     const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
-    const url = `https://lingva.ml/api/v1/${sl}/${targetLang}/${encodeURIComponent(text.substring(0, 1500))}`;
-
-    try {
-      this.lastRequestAt = Date.now();
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      if (data && data.translation) { this.failures = 0; return data.translation; }
-      throw new Error('Empty response');
-    } catch (e) {
-      this.failures++;
-      if (this.failures >= 5) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 4 * 60 * 1000; }
-      throw e;
+    const q = encodeURIComponent(text.substring(0, 1200));
+    const url = `https://lingva.ml/api/v1/${sl}/${targetLang}/${q}`;
+    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+      const elapsed = Date.now() - this.lastRequestAt;
+      const wait = this.minDelay * (attempt + 1) + Math.random() * 300;
+      if (elapsed < wait) await sleep(wait - elapsed);
+      try {
+        this.lastRequestAt = Date.now();
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!data || !data.translation) throw new Error('Empty response');
+        if (data.translation === text) throw new Error('Same text returned');
+        this.failures = 0;
+        return data.translation;
+      } catch (e) {
+        console.warn(`[Lingva] Attempt ${attempt + 1} failed:`, e.message);
+        if (attempt === this.maxRetries - 1) {
+          this.failures++;
+          if (this.failures >= 5) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 4 * 60 * 1000; }
+          throw e;
+        }
+      }
     }
   }
-  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
 
 class MyMemoryProvider {
@@ -260,16 +268,20 @@ class MyMemoryProvider {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed);
-
+    if (elapsed < this.minDelay) await sleep(this.minDelay - elapsed);
     const sl = sourceLang === 'Autodetect' ? 'Autodetect' : sourceLang;
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 300))}&langpair=${sl}|${targetLang}&de=${encodeURIComponent(this.email)}`;
+    const q = encodeURIComponent(text.substring(0, 300));
+    const url = `https://api.mymemory.translated.net/get?q=${q}&langpair=${sl}|${targetLang}&de=${encodeURIComponent(this.email)}`;
     try {
       this.lastRequestAt = Date.now();
       const resp = await fetch(url);
       if (resp.status === 429) throw new Error('429');
       const data = await resp.json();
-      if (data.responseData?.translatedText) { this.failures = 0; return data.responseData.translatedText; }
+      if (data.responseData?.translatedText) {
+        const t = data.responseData.translatedText;
+        if (t && t !== text) { this.failures = 0; return t; }
+        throw new Error('Same text returned');
+      }
       throw new Error(data.responseDetails || 'Empty');
     } catch (e) {
       this.failures++;
@@ -277,7 +289,6 @@ class MyMemoryProvider {
       throw e;
     }
   }
-  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
 
 class LibreTranslateProvider {
@@ -303,29 +314,21 @@ class LibreTranslateProvider {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 1000);
-
+    if (elapsed < this.minDelay) await sleep(this.minDelay - elapsed + Math.random() * 1000);
     const url = `${this.baseUrl}/translate`;
-    const body = {
-      q: text.substring(0, 800),
-      source: sourceLang === 'Autodetect' ? 'auto' : sourceLang,
-      target: targetLang,
-      format: 'text'
-    };
+    const body = { q: text.substring(0, 800), source: sourceLang === 'Autodetect' ? 'auto' : sourceLang, target: targetLang, format: 'text' };
     try {
       this.lastRequestAt = Date.now();
       const resp = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(body)
       });
       if (resp.status === 429) { this.failures++; this.rotateMirror(); throw new Error('429'); }
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
+      if (!data.translatedText || data.translatedText === text) throw new Error('Same text returned');
       this.failures = 0;
       return data.translatedText;
     } catch (e) {
@@ -340,7 +343,6 @@ class LibreTranslateProvider {
     this.failures = Math.max(0, this.failures - 2);
     console.log(`[LibreTranslate] Rotated to: ${this.baseUrl}`);
   }
-  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
 
 class UserKeyProvider {
@@ -358,7 +360,7 @@ class UserKeyProvider {
     const key = this.getKey();
     if (!key) throw new Error('No API key');
     const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed);
+    if (elapsed < this.minDelay) await sleep(this.minDelay - elapsed);
     this.lastRequestAt = Date.now();
     if (this.type === 'google') return this.translateGoogle(text, targetLang, sourceLang, key);
     if (this.type === 'deepl') return this.translateDeepL(text, targetLang, sourceLang, key);
@@ -408,8 +410,6 @@ class UserKeyProvider {
     const data = await resp.json();
     return data[0].translations[0].text;
   }
-
-  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
 
 // ======================= TRANSLATION MANAGER =======================
@@ -437,15 +437,6 @@ class TranslationManager {
     });
   }
 
-  getStatus() {
-    return this.providers.map(p => ({
-      name: p.name,
-      available: p instanceof UserKeyProvider ? p.hasKey() : !p.circuitOpen,
-      circuitOpen: p.circuitOpen || false,
-      failures: p.failures || 0
-    }));
-  }
-
   get providerStatus() {
     return this.getStatus();
   }
@@ -453,6 +444,15 @@ class TranslationManager {
   get bestProvider() {
     const free = this.activeProviders.find(p => !(p instanceof UserKeyProvider));
     return free || this.activeProviders[0] || null;
+  }
+
+  getStatus() {
+    return this.providers.map(p => ({
+      name: p.name,
+      available: p instanceof UserKeyProvider ? p.hasKey() : !p.circuitOpen,
+      circuitOpen: p.circuitOpen || false,
+      failures: p.failures || 0
+    }));
   }
 
   async translate(text, targetLang = 'te', sourceLang = 'Autodetect') {
@@ -473,15 +473,18 @@ class TranslationManager {
       for (const provider of this.activeProviders) {
         try {
           translated = await provider.translate(chunk, targetLang, sourceLang);
-          this.stats.translated++;
-          break;
+          if (translated && translated !== chunk) {
+            this.stats.translated++;
+            break;
+          }
+          throw new Error('Returned same text');
         } catch (e) {
           lastError = e.message;
           console.warn(`[Translate] ${provider.name} failed:`, e.message);
         }
       }
 
-      if (translated === null) {
+      if (translated === null || translated === chunk) {
         console.warn('[Translate] All providers failed. Using original. Last error:', lastError);
         this.stats.failed++;
         translated = chunk;
@@ -508,11 +511,8 @@ class TranslationManager {
       if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
       const r = await this.translate(lines[i], targetLang, sourceLang);
       results.push(r);
-      if (this.cache.get(lines[i], sourceLang, targetLang) === r && cachedCount > 0) {
-        // cached
-      } else {
-        networkDone++;
-      }
+      const wasCached = this.cache.get(lines[i], sourceLang, targetLang) === r && cachedCount > 0;
+      if (!wasCached) networkDone++;
       if (onProgress) onProgress(i + 1, lines.length, networkDone, networkTotal);
     }
     return results;
@@ -533,58 +533,9 @@ class TranslationManager {
   }
 }
 
-
 const Translator = new TranslationManager();
 
-// ======================= PDF PROCESSOR =======================
-class PDFStoryExtractor {
-  constructor() {
-    this.stories = [];
-  }
-  async loadPDF(arrayBuffer) {
-    if (typeof pdfjsLib === 'undefined') {
-      throw new Error('PDF.js not loaded. Please include pdf.min.js');
-    }
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const pages = [];
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const rawText = textContent.items.map(item => item.str).join(' ');
-      const cleanText = TextSanitizer.cleanPDFText(rawText);
-      pages.push({ pageNum: i, text: cleanText, rawText });
-    }
-    return pages;
-  }
-  detectStories(pages) {
-    const stories = [];
-    let current = { title: 'Story 1', pages: [], text: '', sentences: [] };
-    pages.forEach((p) => {
-      const sentences = TextSanitizer.splitIntoSentences(p.text);
-      if (sentences.length === 0) return;
-      const first = sentences[0];
-      const isTitle = /^\d+[.\)]?\s*[A-Z\u0900-\u097F\u0C00-\u0C7F]/.test(first) ||
-                      /^(Chapter|Story|Katha|కథ|అధ్యాయం|भाग|कथा|अध्याय)/i.test(first) ||
-                      (first.length < 60 && first.length > 5);
-      if (isTitle && current.sentences.length > 2) {
-        stories.push(current);
-        current = { title: first, pages: [p.pageNum], text: p.text, sentences };
-      } else {
-        current.pages.push(p.pageNum);
-        current.text += '\n' + p.text;
-        current.sentences.push(...sentences);
-      }
-    });
-    if (current.sentences.length > 0) stories.push(current);
-    return stories;
-  }
-}
-
-// ======================= MAIN APP =======================
-
-// ======================= THEATER STUB =======================
-// Minimal Theater + VoiceMapper to prevent crashes when clicking stories
-// Full theater implementation can be added later
+// ======================= THEATER / AUDIO PLAYER =======================
 
 class VoiceMapper {
   constructor() {
@@ -592,7 +543,8 @@ class VoiceMapper {
     this.emojiMap = {
       narrator: '🌙', hero: '⚔️', heroine: '✨', villain: '🐍',
       king: '👑', queen: '👸', sage: '📿', child: '🧒',
-      demon: '👹', guard: '🛡️', farmer: '🌾', merchant: '💰'
+      demon: '👹', guard: '🛡️', farmer: '🌾', merchant: '💰',
+      woman: '👩', man: '👨', bird: '🐦', animal: '🐾'
     };
   }
   autoAssign(chars) {
@@ -614,29 +566,118 @@ class Theater {
     this.voiceMapper = new VoiceMapper();
     this.script = null;
     this.lang = 'en';
+    this.isPlaying = false;
+    this.currentIndex = 0;
+    this.voices = [];
+    this.loadVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = () => this.loadVoices();
+    }
   }
+
+  loadVoices() {
+    this.voices = speechSynthesis.getVoices() || [];
+  }
+
+  getVoiceForLang(lang) {
+    this.loadVoices();
+    const langCode = lang.toLowerCase();
+    let v = this.voices.find(vx => vx.lang.toLowerCase().startsWith(langCode));
+    if (!v && langCode === 'te') v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('hi'));
+    if (!v && langCode === 'te') v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ta'));
+    if (!v) v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('en'));
+    return v || null;
+  }
+
   loadScript(script, lang) {
     this.script = script;
     this.lang = lang;
+    this.currentIndex = 0;
   }
+
   open() {
-    console.log('[Theater] Opening theater (stub)');
+    console.log('[Theater] Opening');
   }
-  play() {
-    console.log('[Theater] Playing (stub) — use browser TTS or implement audio player');
-    // Basic TTS fallback
-    if (this.script && this.script.lines) {
-      const utter = new SpeechSynthesisUtterance();
-      utter.lang = this.lang;
-      const line = this.script.lines[0];
-      utter.text = line.translated || line.text;
-      speechSynthesis.speak(utter);
+
+  stop() {
+    this.isPlaying = false;
+    speechSynthesis.cancel();
+  }
+
+  async play() {
+    if (!this.script || !this.script.lines || this.script.lines.length === 0) {
+      alert('No script loaded. Please select a story and translate first.');
+      return;
     }
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    this.currentIndex = 0;
+
+    const voice = this.getVoiceForLang(this.lang);
+    const lines = this.script.lines;
+
+    let overlay = document.getElementById('theaterOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'theaterOverlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,#0f0c29,#302b63,#24243e);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Nunito,sans-serif;color:#fff;overflow:hidden;';
+      document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+      <div style="position:absolute;top:20px;right:20px;cursor:pointer;font-size:28px;z-index:10000;" onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';">✕</div>
+      <div style="position:absolute;top:20px;left:20px;font-size:14px;color:#c4b5fd;">🎭 Chandamama Theater — ${this.lang.toUpperCase()}</div>
+      <div id="theaterStage" style="text-align:center;max-width:800px;padding:40px;transition:all 0.4s ease;">
+        <div id="theaterEmoji" style="font-size:64px;margin-bottom:20px;opacity:0;transform:scale(0.5);transition:all 0.4s ease;">🌙</div>
+        <div id="theaterSpeaker" style="font-size:18px;color:#fbbf24;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;opacity:0;transition:opacity 0.3s;">Narrator</div>
+        <div id="theaterLine" style="font-size:28px;line-height:1.6;font-weight:600;opacity:0;transform:translateY(10px);transition:all 0.4s ease;"></div>
+      </div>
+      <div style="position:absolute;bottom:30px;display:flex;gap:20px;">
+        <button onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:10px 24px;border-radius:20px;cursor:pointer;font-family:Nunito;">⏹ Stop</button>
+      </div>
+    `;
+
+    for (let i = 0; i < lines.length && this.isPlaying; i++) {
+      this.currentIndex = i;
+      const line = lines[i];
+      const text = line.translated || line.text;
+      const speaker = line.speaker || 'Narrator';
+      const vm = this.voiceMapper.map[speaker] || { emoji: '🌙', type: 'narrator' };
+
+      const emojiEl = document.getElementById('theaterEmoji');
+      const speakerEl = document.getElementById('theaterSpeaker');
+      const lineEl = document.getElementById('theaterLine');
+
+      if (emojiEl) { emojiEl.textContent = vm.emoji; emojiEl.style.opacity = '1'; emojiEl.style.transform = 'scale(1)'; }
+      if (speakerEl) { speakerEl.textContent = speaker; speakerEl.style.opacity = '1'; }
+      if (lineEl) { lineEl.textContent = text; lineEl.style.opacity = '1'; lineEl.style.transform = 'translateY(0)'; }
+
+      if (text && voice) {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.voice = voice;
+        utter.lang = voice.lang;
+        utter.rate = 0.9;
+        utter.pitch = vm.type === 'child' ? 1.3 : vm.type === 'demon' ? 0.7 : 1.0;
+        speechSynthesis.speak(utter);
+        await new Promise(r => { utter.onend = r; utter.onerror = r; });
+      } else if (text) {
+        await sleep(2500);
+      }
+
+      if (lineEl) { lineEl.style.opacity = '0'; lineEl.style.transform = 'translateY(-10px)'; }
+      if (emojiEl) { emojiEl.style.opacity = '0.3'; }
+      await sleep(500);
+    }
+
+    this.isPlaying = false;
+    const lineEl = document.getElementById('theaterLine');
+    if (lineEl) lineEl.textContent = '🎬 The End';
   }
 }
 
 window.theater = new Theater();
 
+// ======================= PDF PROCESSOR =======================
 class ChandamamaApp {
   constructor() {
     this.lang = 'te';
@@ -842,7 +883,7 @@ class ChandamamaApp {
     const panel = document.getElementById('translationPanel');
     const fill = document.getElementById('transProgress');
     const textDiv = document.getElementById('translatedText');
-    panel.style.display = 'block';
+    if (panel) if (panel) panel.style.display = 'block';
     const texts = this.currentStory.lines.map(l => l.text);
     const statsBefore = Translator.getCacheStats();
     try {
@@ -940,16 +981,13 @@ class ChandamamaApp {
   }
 
   openTheater() {
-    if (!this.currentStory || !this.currentStory.lines.length) return;
-    const hasTranslation = this.currentStory.lines[0].translated;
+    if (!this.currentStory || !this.currentStory.lines || this.currentStory.lines.length === 0) return;
+    const hasTranslation = this.currentStory.lines.some(l => l.translated);
     if (!hasTranslation) {
-      const go = confirm('Text is not yet translated to ' + this.lang.toUpperCase() + '. Theater will speak in the original language (which may sound like gibberish if your browser lacks that voice).\n\nClick OK to translate first, or Cancel to play original.');
+      const go = confirm('🎭 Text is not yet translated to ' + this.lang.toUpperCase() + '.\n\nTheater will speak in the original language (Sanskrit/Hindi), which may not sound correct if your browser lacks Indic voices.\n\nClick OK to translate first, or Cancel to play original.');
       if (go) { this.translateStory(); return; }
     }
-    const script = this.currentStory.lines.map(l => ({
-      speaker: l.speaker,
-      text: hasTranslation ? l.translated : l.text
-    }));
+    const script = { title: this.currentStory.title, lines: this.currentStory.lines };
     window.theater.loadScript(script, this.lang);
     window.theater.open();
     window.theater.play();
