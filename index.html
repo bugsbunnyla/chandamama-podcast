@@ -7,7 +7,6 @@
   <meta name="description" content="Ancient Sanskrit tales retold in 8 languages. PDF-to-podcast theater with character voices for children.">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
-  <!-- PDF.js for client-side PDF parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
@@ -35,7 +34,7 @@
     <!-- Language Selection -->
     <section>
       <h2>Choose Your Language</h2>
-      <p class="section-desc">Select the language for translation and voice output. The theater will use your browser's built-in voices.</p>
+      <p class="section-desc">Select the language for translation and voice output.</p>
       <div class="grid" id="langGrid"></div>
       <p class="pdf-status" id="currentLangLabel" style="margin-top:10px; font-size:0.85rem; color:var(--moon-gold);">Target: TE</p>
     </section>
@@ -53,31 +52,31 @@
       <div class="pdf-status" id="pdfStatus"></div>
     </section>
 
-    <!-- Story Selector -->
+    <!-- Story Selector + Full Book -->
     <section id="storySelector" style="display:none;"></section>
+
+    <!-- Full Book Reader -->
+    <section id="fullBookReader" style="display:none;"></section>
 
     <!-- Story Editor / Theater Builder -->
     <section id="storyEditor" style="display:none;"></section>
 
     <!-- About -->
-    <section style="background: rgba(255,255,255,0.05); border-radius: var(--radius); padding: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
-      <h2 style="color:var(--moon-gold); text-align:center; margin-bottom:12px;">About Chandamama</h2>
-      <p style="color: rgba(255,255,255,0.85); margin-bottom: 12px; font-size: 1rem;">In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
-      <p style="color: rgba(255,255,255,0.85); margin-bottom: 12px; font-size: 1rem;">These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
-      <p style="color: rgba(255,255,255,0.85); font-size: 1rem;">Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
-      <div style="margin-top: 20px; text-align: center;">
-        <a href="https://archive.org/details/Chandamama_Sanskrit_1999" target="_blank" rel="noopener" style="color: var(--moon-gold); text-decoration: none; font-weight: 600; border-bottom: 2px solid var(--moon-gold); padding-bottom: 2px;">📚 View Original Source on Archive.org</a>
+    <section class="about-section">
+      <h2>About Chandamama</h2>
+      <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
+      <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
+      <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
+      <div class="source-link">
+        <a href="https://archive.org/details/Chandamama_Sanskrit_1999" target="_blank" rel="noopener">📚 View Original Source on Archive.org</a>
       </div>
     </section>
   </main>
 
   <footer>
-    <p>Made with 🌙 for children everywhere. Source: <a href="https://archive.org/details/Chandamama_Sanskrit_1999" style="color: var(--moon-gold); text-decoration: none;">Chandamama Sanskrit 1999</a> via Archive.org.</p>
-    <p>Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" style="color: var(--moon-gold);">CC BY-SA 4.0</a>.</p>
+    <p>Made with 🌙 for children everywhere. Source: <a href="https://archive.org/details/Chandamama_Sanskrit_1999">Chandamama Sanskrit 1999</a> via Archive.org.</p>
+    <p>Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.</p>
   </footer>
-
-  <!-- Theater Overlay (injected by JS) -->
-  <!-- Podcast Bar (injected by JS) -->
 
   <script src="assets/js/app.js"></script>
 </body>

@@ -422,3 +422,109 @@ footer {
   .podcast-bar { padding: 8px 12px; gap: 8px; }
   .podcast-progress { min-width: 100px; }
 }
+
+
+/* ===== v3.0 Additions ===== */
+
+/* Full Book Actions */
+.full-book-actions {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-top: 16px;
+}
+
+/* Full Book Reader */
+#fullBookReader {
+  background: rgba(0,0,0,0.3);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+#fullBookReader h3 {
+  color: var(--moon-gold);
+  margin-bottom: 16px;
+  font-size: 1.3rem;
+}
+
+.book-story-block {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.book-story-block:last-child {
+  border-bottom: none;
+}
+
+.book-story-title {
+  color: var(--moon-gold);
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.book-paragraph {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.9);
+  padding-left: 12px;
+  border-left: 2px solid rgba(244, 208, 63, 0.3);
+}
+
+/* TTS Notice */
+.theater-tts-notice {
+  background: rgba(255, 153, 51, 0.15);
+  border: 1px solid rgba(255, 153, 51, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  display: inline-block;
+}
+
+/* About section */
+.about-section {
+  background: rgba(255,255,255,0.05);
+  border-radius: var(--radius);
+  padding: 30px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.about-section p {
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+.about-section strong {
+  color: var(--moon-gold);
+}
+.about-section em {
+  color: #a8d8ea;
+  font-style: italic;
+}
+.source-link {
+  margin-top: 20px;
+  text-align: center;
+}
+.source-link a {
+  color: var(--moon-gold);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 2px solid var(--moon-gold);
+  padding-bottom: 2px;
+}
+
+/* Enhanced progress for full book */
+#fullBookProgress {
+  transition: width 0.5s ease;
+}
+
+#fullBookStatus {
+  font-family: 'Nunito', monospace;
+  letter-spacing: 0.5px;
+}
