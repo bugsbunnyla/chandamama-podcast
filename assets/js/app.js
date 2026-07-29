@@ -1,17 +1,17 @@
 /* ============================================================
-   Chandamama Podcast Theater — Fixed & Enhanced v2.0
-   Fixes: 429 rate-limit, illegible text, character voices,
-          PDF→Episode pipeline, podcast play button
+   Chandamama Podcast Theater — Fixed v2.1
+   Fixes: 414 URI Too Long, illegible PDF garbage, 
+          text sanitization, chunked translation
    ============================================================ */
 
 // ======================= CONFIG =======================
 const CONFIG = {
   translateApi: 'https://api.mymemory.translated.net/get',
-  translateDelay: 1200,        // ms between requests (avoid 429)
+  translateDelay: 1200,
   translateCacheKey: 'cm_translate_cache_v2',
-  pdfCacheKey: 'cm_pdf_stories_v2',
-  bookmarkKey: 'cm_bookmarks_v2',
   maxRetries: 3,
+  maxChunkLength: 450,      // Max chars per translation request
+  maxLineLength: 300,       // Max chars per dialogue line
   voices: {
     kidBoy:     { pitch: 1.45, rate: 1.15, label: '👦 Kid Boy' },
     kidGirl:    { pitch: 1.55, rate: 1.10, label: '👧 Kid Girl' },
@@ -26,7 +26,94 @@ const CONFIG = {
   }
 };
 
-// ======================= TRANSLATION ENGINE (Fixed 429) =======================
+// ======================= TEXT SANITIZER =======================
+class TextSanitizer {
+  static cleanPDFText(text) {
+    if (!text) return '';
+    let t = text;
+
+    // Remove PDF artifacts: page markers, headers, footers, ISBNs, prices
+    t = t.replace(/---\s*PAGE\s*\d+\s*---/gi, '\n');
+    t = t.replace(/\b\d{3,5}\s*[\-/]\s*\d{3,5}\s*[\-/]\s*\d{3,5}\b/g, ' '); // Phone/ISBN numbers
+    t = t.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, ' '); // Dates
+    t = t.replace(/\bRs\.?\s*\d+[\.,]?\d*\b/gi, ' '); // Prices
+    t = t.replace(/\b\d+\s*(?:€|\$|£|¥)\b/g, ' '); // Currency
+    t = t.replace(/\b\d{4,}\b/g, ' '); // Long number sequences
+    t = t.replace(/[#@^*~+=|\\{}[\]_<>]/g, ' '); // Junk symbols
+    t = t.replace(/\b\d+\s*\/\s*-\s*\d+\b/g, ' '); // "100/- 200" patterns
+    t = t.replace(/\b\d+\s*\(\s*\d+\s*\)\s*\d+\b/g, ' '); // Phone patterns
+    t = t.replace(/\b\d+\s*[-.]\s*\d+\s*[-.]\s*\d+\b/g, ' '); // Number chains
+
+    // Remove lines that are mostly numbers/symbols (OCR garbage)
+    const lines = t.split(/\n+/);
+    const cleanLines = lines.filter(line => {
+      const alphaCount = (line.match(/[\u0900-\u097F\u0C00-\u0C7F\u0B80-\u0BFF\u0D00-\u0D7F\u0980-\u09FF\u0A80-\u0AFFa-zA-Z]/g) || []).length;
+      const totalCount = line.trim().length;
+      if (totalCount === 0) return false;
+      const ratio = alphaCount / totalCount;
+      // Keep lines that are at least 30% actual letters
+      return ratio > 0.30 || totalCount < 10;
+    });
+
+    t = cleanLines.join('\n');
+
+    // Normalize whitespace
+    t = t.replace(/\s+/g, ' ').trim();
+
+    // Remove repeated punctuation
+    t = t.replace(/[.]{2,}/g, '…');
+    t = t.replace(/[,]{2,}/g, ',');
+    t = t.replace(/[!]{2,}/g, '!');
+    t = t.replace(/[?]{2,}/g, '?');
+
+    return t;
+  }
+
+  static splitIntoSentences(text) {
+    if (!text) return [];
+    // Split on sentence endings for Sanskrit/Hindi/Telugu/English
+    const sentences = text
+      .replace(/([।.!?])\s+/g, "$1\n")
+      .split(/\n+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 5 && s.length < CONFIG.maxLineLength);
+    return sentences;
+  }
+
+  static chunkForTranslation(text, maxLen = CONFIG.maxChunkLength) {
+    if (!text) return [];
+    if (text.length <= maxLen) return [text];
+    const chunks = [];
+    let current = '';
+    const words = text.split(/\s+/);
+    for (const word of words) {
+      if ((current + ' ' + word).length > maxLen) {
+        if (current) chunks.push(current.trim());
+        current = word;
+      } else {
+        current = current ? current + ' ' + word : word;
+      }
+    }
+    if (current) chunks.push(current.trim());
+    return chunks;
+  }
+
+  static isGarbageLine(line) {
+    if (!line || line.length < 3) return true;
+    // Check for high ratio of non-letters
+    const letters = (line.match(/[\p{L}]/gu) || []).length;
+    const total = line.length;
+    if (letters / total < 0.25) return true;
+    // Check for repeated single characters (OCR artifacts)
+    if (/^(.)\1{3,}$/.test(line)) return true;
+    // Check for excessive digits
+    const digits = (line.match(/\d/g) || []).length;
+    if (digits / total > 0.6) return true;
+    return false;
+  }
+}
+
+// ======================= TRANSLATION ENGINE (Fixed 429 + 414) =======================
 class TranslationEngine {
   constructor() {
     this.cache = this.loadCache();
@@ -55,9 +142,24 @@ class TranslationEngine {
 
   async translate(text, targetLang = 'te', sourceLang = 'Autodetect') {
     if (!text || !text.trim()) return '';
-    const key = this.hash(text + '|' + sourceLang + '|' + targetLang);
-    if (this.cache[key]) return this.cache[key];
+    // Sanitize and chunk
+    const clean = TextSanitizer.cleanPDFText(text);
+    const chunks = TextSanitizer.chunkForTranslation(clean, CONFIG.maxChunkLength);
 
+    const results = [];
+    for (const chunk of chunks) {
+      const key = this.hash(chunk + '|' + sourceLang + '|' + targetLang);
+      if (this.cache[key]) {
+        results.push(this.cache[key]);
+        continue;
+      }
+      const r = await this.translateChunk(chunk, targetLang, sourceLang, key);
+      results.push(r);
+    }
+    return results.join(' ');
+  }
+
+  async translateChunk(text, targetLang, sourceLang, key) {
     return new Promise((resolve) => {
       this.queue.push({ text, targetLang, sourceLang, key, resolve });
       if (!this.processing) this.processQueue();
@@ -73,11 +175,16 @@ class TranslationEngine {
     for (let attempt = 0; attempt < CONFIG.maxRetries; attempt++) {
       try {
         await this.sleep(attempt * this.delay);
-        const url = `${CONFIG.translateApi}?q=${encodeURIComponent(job.text)}&langpair=${job.sourceLang}|${job.targetLang}`;
+        const url = `${CONFIG.translateApi}?q=${encodeURIComponent(job.text.substring(0, CONFIG.maxChunkLength))}&langpair=${job.sourceLang}|${job.targetLang}`;
         const resp = await fetch(url);
         if (resp.status === 429) {
-          console.warn('[Translate] 429 — backing off');
+          console.warn('[Translate] 429 — backing off, attempt', attempt + 1);
           await this.sleep(this.delay * 2 * (attempt + 1));
+          continue;
+        }
+        if (resp.status === 414) {
+          console.warn('[Translate] 414 URI Too Long — truncating');
+          job.text = job.text.substring(0, 300);
           continue;
         }
         const data = await resp.json();
@@ -85,7 +192,12 @@ class TranslationEngine {
           result = data.responseData.translatedText;
           break;
         }
-      } catch (e) { console.warn('[Translate] attempt failed', e); }
+        if (data.responseStatus && data.responseStatus !== 200) {
+          console.warn('[Translate] API error:', data.responseStatus, data.responseDetails);
+        }
+      } catch (e) { 
+        console.warn('[Translate] attempt failed:', e.message); 
+      }
     }
 
     if (!result) result = job.text; // fallback to original
@@ -93,7 +205,6 @@ class TranslationEngine {
     this.saveCache();
     job.resolve(result);
 
-    // Delay before next request to respect rate limits
     await this.sleep(this.delay);
     this.processQueue();
   }
@@ -113,47 +224,79 @@ class TranslationEngine {
 
 const Translator = new TranslationEngine();
 
-// ======================= PDF PARSER =======================
+// ======================= PDF PROCESSOR (Integrates with existing pdf-processor.js if present) =======================
 class PDFStoryExtractor {
   constructor() {
     this.stories = [];
+    this.useExternalProcessor = (typeof PDFAutoProcessor !== 'undefined');
   }
 
   async loadPDF(arrayBuffer) {
+    // If the existing pdf-processor.js is loaded, use it
+    if (this.useExternalProcessor && window.pdfProcessor) {
+      console.log('[PDF] Using existing pdf-processor.js');
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      try {
+        const story = await window.pdfProcessor.process(url);
+        URL.revokeObjectURL(url);
+        return this.adaptExternalStory(story);
+      } catch (e) {
+        URL.revokeObjectURL(url);
+        console.warn('[PDF] External processor failed, falling back:', e);
+      }
+    }
+
+    // Fallback to built-in PDF.js extraction
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF.js not loaded. Please include pdf.min.js');
+    }
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const pages = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const text = textContent.items.map(item => item.str).join(' ').replace(/\s+/g, ' ').trim();
-      pages.push({ pageNum: i, text });
+      const rawText = textContent.items.map(item => item.str).join(' ');
+      const cleanText = TextSanitizer.cleanPDFText(rawText);
+      pages.push({ pageNum: i, text: cleanText, rawText });
     }
     return pages;
   }
 
+  adaptExternalStory(story) {
+    // Convert pdf-processor.js output format to our format
+    if (!story || !story.episodes) return [];
+    return story.episodes.map((ep, idx) => ({
+      pageNum: idx + 1,
+      text: (ep.script || []).map(s => s.text).join('. '),
+      title: ep.title || `Episode ${idx + 1}`
+    }));
+  }
+
   detectStories(pages) {
-    // Simple heuristic: look for title-like lines (short, all caps, or numbered)
     const stories = [];
-    let current = { title: 'Story 1', pages: [], text: '' };
+    let current = { title: 'Story 1', pages: [], text: '', sentences: [] };
 
-    pages.forEach((p, idx) => {
-      const lines = p.text.split(/[.!?\n]+/).map(l => l.trim()).filter(l => l.length > 3);
-      const firstLine = lines[0] || '';
+    pages.forEach((p) => {
+      const sentences = TextSanitizer.splitIntoSentences(p.text);
+      if (sentences.length === 0) return;
 
-      // Heuristic for new story: short first line (< 60 chars) with keywords or numbering
-      const isTitle = /^\d+[.\)]?\s*[A-Z\u0900-\u097F\u0C00-\u0C7F]/.test(firstLine) ||
-                      /^(Chapter|Story|Katha|కథ|అధ్యాయం|భాగం)/i.test(firstLine) ||
-                      (firstLine.length < 60 && firstLine.length > 5);
+      const firstSentence = sentences[0];
+      // Heuristic for new story: short first sentence that looks like a title
+      const isTitle = /^\d+[.\)]?\s*[A-Z\u0900-\u097F\u0C00-\u0C7F]/.test(firstSentence) ||
+                      /^(Chapter|Story|Katha|కథ|అధ్యాయం|భాగం|कथा|अध्याय)/i.test(firstSentence) ||
+                      (firstSentence.length < 50 && firstSentence.length > 5 && !firstSentence.includes(' '));
 
-      if (isTitle && current.pages.length > 0) {
+      if (isTitle && current.sentences.length > 2) {
         stories.push(current);
-        current = { title: firstLine, pages: [p.pageNum], text: p.text };
+        current = { title: firstSentence, pages: [p.pageNum], text: p.text, sentences };
       } else {
         current.pages.push(p.pageNum);
         current.text += '\n' + p.text;
+        current.sentences.push(...sentences);
       }
     });
-    if (current.pages.length > 0) stories.push(current);
+    if (current.sentences.length > 0) stories.push(current);
     return stories;
   }
 }
@@ -161,7 +304,7 @@ class PDFStoryExtractor {
 // ======================= CHARACTER VOICE MAPPER =======================
 class CharacterVoiceMapper {
   constructor() {
-    this.map = {}; // characterName -> { type, voice, pitch, rate, emoji }
+    this.map = {};
     this.synth = window.speechSynthesis;
     this.voices = [];
     this.loadVoices();
@@ -176,7 +319,6 @@ class CharacterVoiceMapper {
 
   getVoiceForLang(lang = 'te') {
     if (!this.voices.length) this.loadVoices();
-    // Prefer native voices for the target language
     const langMap = { te: 'te', hi: 'hi', sa: 'hi', en: 'en', ta: 'ta', kn: 'kn', ml: 'ml', bn: 'bn' };
     const code = langMap[lang] || lang;
     let candidates = this.voices.filter(v => v.lang && v.lang.startsWith(code));
@@ -207,15 +349,15 @@ class CharacterVoiceMapper {
 
   detectTypeFromName(name) {
     const n = name.toLowerCase();
-    if (/\b(boy|son|kid|child|bala|balu|రాజు|బాలుడు)\b/.test(n)) return 'kidBoy';
-    if (/\b(girl|daughter|kid|child|bala|రాణి|బాలిక)\b/.test(n)) return 'kidGirl';
-    if (/\b(old man|grandfather|thatha|తాతయ్య|ముసలి|వృద్ధ)\b/.test(n)) return 'oldMale';
-    if (/\b(old woman|grandmother|paati|నానమ్మ|ముసలి|వృద్ధ)\b/.test(n)) return 'oldFemale';
-    if (/\b(elder|uncle|mama|గురువు|పెద్ద)\b/.test(n)) return 'elderMale';
-    if (/\b(elder|aunty|amma|పెద్ద)\b/.test(n)) return 'elderFemale';
-    if (/\b(animal|dog|cat|bird|lion|fox|తోడు|నక్క|సింహం|ఏనుగ)\b/.test(n)) return 'animal';
-    if (/\b(queen|princess|wife|mother|sister|అమ్మ|అక్క|భార్య|రాణి)\b/.test(n)) return 'adultFemale';
-    if (/\b(king|prince|husband|father|brother|నాన్న|అన్న|భర్త|రాజు)\b/.test(n)) return 'adultMale';
+    if (/\b(boy|son|kid|child|bala|balu|రాజు|బాలుడు|बालक|लड़का)\b/.test(n)) return 'kidBoy';
+    if (/\b(girl|daughter|kid|child|bala|రాణి|బాలిక|बालिका|लड़की)\b/.test(n)) return 'kidGirl';
+    if (/\b(old man|grandfather|thatha|తాతయ్య|ముసలి|వృద్ధ|वृद्ध|बुज़ुर्ग)\b/.test(n)) return 'oldMale';
+    if (/\b(old woman|grandmother|paati|నానమ్మ|ముసలి|వృద్ధ|वृद्धा|बुज़ुर्ग)\b/.test(n)) return 'oldFemale';
+    if (/\b(elder|uncle|mama|గురువు|పెద్ద|गुरु|अंकल)\b/.test(n)) return 'elderMale';
+    if (/\b(elder|aunty|amma|పెద్ద|मासी|आंटी)\b/.test(n)) return 'elderFemale';
+    if (/\b(animal|dog|cat|bird|lion|fox|తోడు|నక్క|సింహం|ఏనుగ|शेर|कुत्ता|बिल्ली|पक्षी|सर्प)\b/.test(n)) return 'animal';
+    if (/\b(queen|princess|wife|mother|sister|అమ్మ|అక్క|భార్య|రాణి|रानी|माँ|बहन|पत्नी)\b/.test(n)) return 'adultFemale';
+    if (/\b(king|prince|husband|father|brother|నాన్న|అన్న|భర్త|రాజు|राजा|पिता|भाई|पति)\b/.test(n)) return 'adultMale';
     return 'narrator';
   }
 
@@ -255,7 +397,6 @@ class TheaterEngine {
     this.autoTimer = null;
     this.lang = 'te';
     this.overlay = null;
-    this.sceneEl = null;
     this.onLineChange = null;
   }
 
@@ -290,7 +431,6 @@ class TheaterEngine {
     `;
     document.body.appendChild(ov);
     this.overlay = ov;
-    this.sceneEl = document.getElementById('theaterScene');
 
     document.addEventListener('keydown', (e) => {
       if (!this.overlay.classList.contains('active')) return;
@@ -304,7 +444,6 @@ class TheaterEngine {
   }
 
   loadScript(lines, lang = 'te') {
-    // lines: [{speaker, text}]
     this.script = lines;
     this.lang = lang;
     this.currentLine = 0;
@@ -637,7 +776,7 @@ class ChandamamaApp {
       if (status) status.textContent = `Found ${this.pages.length} pages, ${this.stories.length} stories.`;
     } catch (e) {
       console.error(e);
-      if (status) status.textContent = 'Error reading PDF.';
+      if (status) status.textContent = 'Error reading PDF: ' + e.message;
     }
   }
 
@@ -649,13 +788,19 @@ class ChandamamaApp {
       <div class="story-list">
         ${this.stories.map((s, i) => `
           <div class="story-card" onclick="app.selectStory(${i})">
-            <div class="story-title">${s.title || 'Untitled ' + (i+1)}</div>
-            <div class="story-meta">Pages ${s.pages[0]}–${s.pages[s.pages.length-1]} · ${s.text.length} chars</div>
+            <div class="story-title">${this.escapeHtml(s.title || 'Untitled ' + (i+1))}</div>
+            <div class="story-meta">Pages ${s.pages[0]}–${s.pages[s.pages.length-1]} · ${s.sentences?.length || 0} lines</div>
           </div>
         `).join('')}
       </div>
     `;
     container.style.display = 'block';
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   selectStory(index) {
@@ -670,27 +815,30 @@ class ChandamamaApp {
     const editor = document.getElementById('storyEditor');
     if (!editor || !this.currentStory) return;
 
-    // Split into dialogue lines heuristically
-    const rawLines = this.currentStory.text.split(/[.!?\n]+/).map(l => l.trim()).filter(l => l.length > 5);
-    const lines = rawLines.map((text, i) => {
-      // Try to detect speaker: look for quotes or "X said" patterns
+    // Use pre-split sentences from PDF extraction
+    const sentences = this.currentStory.sentences || [];
+    const lines = sentences.map((text, i) => {
       let speaker = 'Narrator';
       let lineText = text;
+
+      // Try to detect speaker from quotes
       const quoteMatch = text.match(/^["""'](.+)["""']\s*(.*)/);
       if (quoteMatch) {
         lineText = quoteMatch[1];
         const after = quoteMatch[2];
-        const saidMatch = after.match(/(?:said|cried|asked|replied|అన్నాడు|అన్నది|చెప్పాడు|అడిగాడు)\s+(\w+)/i);
+        const saidMatch = after.match(/(?:said|cried|asked|replied|అన్నాడు|అన్నది|चेप्प|अनौ|said|replied)\s+(\w+)/i);
         if (saidMatch) speaker = saidMatch[1];
       }
-      // If text starts with a name followed by colon
+
+      // Name: dialogue pattern
       const colonMatch = text.match(/^(\w+[\s\w]*)[:：]\s*(.+)/);
       if (colonMatch) {
         speaker = colonMatch[1].trim();
         lineText = colonMatch[2].trim();
       }
+
       return { id: i, speaker, text: lineText, original: text };
-    });
+    }).filter(l => l.text.length > 3); // Remove empty lines
 
     this.currentStory.lines = lines;
 
@@ -708,11 +856,11 @@ class ChandamamaApp {
           ${lines.map((l, i) => `
             <div class="line-row" data-idx="${i}">
               <span class="line-num">${i+1}</span>
-              <input class="line-speaker" value="${l.speaker}" onchange="app.updateSpeaker(${i}, this.value)">
+              <input class="line-speaker" value="${this.escapeHtml(l.speaker)}" onchange="app.updateSpeaker(${i}, this.value)">
               <select class="line-voice" onchange="app.updateVoice(${i}, this.value)">
                 ${Object.entries(CONFIG.voices).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('')}
               </select>
-              <input class="line-text" value="${l.text}" onchange="app.updateText(${i}, this.value)">
+              <input class="line-text" value="${this.escapeHtml(l.text)}" onchange="app.updateText(${i}, this.value)">
             </div>
           `).join('')}
         </div>
@@ -742,8 +890,8 @@ class ChandamamaApp {
       return `
         <div class="cast-chip">
           <span class="cast-emoji">${info.emoji}</span>
-          <span class="cast-name">${c}</span>
-          <select onchange="app.setCharacterType('${c}', this.value)">
+          <span class="cast-name">${this.escapeHtml(c)}</span>
+          <select onchange="app.setCharacterType('${c.replace(/'/g, "\\'")}', this.value)">
             ${Object.entries(CONFIG.voices).map(([k,v]) => 
               `<option value="${k}" ${k===info.type?'selected':''}>${v.label}</option>`
             ).join('')}
@@ -783,7 +931,7 @@ class ChandamamaApp {
     this.currentStory.lines.forEach((l, i) => { l.translated = translated[i]; });
     if (textDiv) {
       textDiv.innerHTML = this.currentStory.lines.map((l, i) => 
-        `<div class="trans-line"><b>${l.speaker}:</b> ${l.translated}</div>`
+        `<div class="trans-line"><b>${this.escapeHtml(l.speaker)}:</b> ${this.escapeHtml(l.translated || l.text)}</div>`
       ).join('');
     }
     if (fill) fill.style.width = '100%';
@@ -812,7 +960,7 @@ class ChandamamaApp {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `chandamama_${this.currentStory.title.replace(/\W+/g,'_')}.json`;
+    a.download = `chandamama_${(this.currentStory.title || 'story').replace(/\W+/g,'_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

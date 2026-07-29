@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{LANG}}">
+<html lang="te">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chandamama — {{LANG_NAME}} | Moonlight Stories</title>
-  <meta name="description" content="Chandamama {{LANG_NAME}} episodes: enacted multi-cast stories for children.">
+  <title>Chandamama — Telugu | Moonlight Stories</title>
+  <meta name="description" content="Chandamama Telugu episodes: enacted multi-cast stories for children.">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -15,11 +15,11 @@
   <header class="hero">
     <a href="../index.html" class="back-link" style="display:inline-block; margin-bottom:12px; color:var(--moon-gold); text-decoration:none; font-weight:600;">← Back to All Languages</a>
     <div class="moon">
-      <div class="moon-face">{{FLAG}}</div>
+      <div class="moon-face">🇮🇳</div>
       <div class="moon-glow"></div>
     </div>
-    <h1>Chandamama — {{LANG_NAME}}</h1>
-    <p class="subtitle">{{LANG_NATIVE}}</p>
+    <h1>Chandamama — Telugu</h1>
+    <p class="subtitle">తెలుగు</p>
     <p class="tagline">Narrated by Uncle Moonbeam & The Royal Cast</p>
     <div class="hero-badges">
       <span class="badge">🎭 Multi-Cast Theater</span>
@@ -36,7 +36,7 @@
         <strong>Theater Mode uses your browser's built-in voices.</strong><br>
         Each character speaks with a distinct voice, pitch, and speed. For best results, use Chrome, Edge, or Safari.
         <div style="margin-top: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.5);">
-          Voices available: 👦 Kid Boy, 👧 Kid Girl, 👨 Adult Male, 👩 Adult Female, 👴 Elder Male, 👵 Elder Female, 🧓 Old Age Male, 🧓 Old Age Female, 🐾 Animal
+          Voices: 👦 Kid Boy, 👧 Kid Girl, 👨 Adult Male, 👩 Adult Female, 👴 Elder Male, 👵 Elder Female, 🧓 Old Age Male, 🧓 Old Age Female, 🐾 Animal
         </div>
       </div>
     </div>
@@ -60,13 +60,12 @@
     <!-- Story Editor -->
     <section id="storyEditor" style="display:none;"></section>
 
-    <!-- Pre-loaded Episodes (optional fallback) -->
+    <!-- Pre-loaded Episodes -->
     <section>
       <h2>Episodes</h2>
       <div class="episode-list" id="episodeList">
-        <!-- Populated from stories/{{LANG}}.json if available -->
         <div class="episode-card" style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">
-          <p>Upload a PDF above to see episodes, or place <code>stories/{{LANG}}.json</code> in the repo.</p>
+          <p>Upload a PDF above to see episodes, or place <code>stories/te.json</code> in the repo.</p>
         </div>
       </div>
     </section>
@@ -79,9 +78,8 @@
 
   <script src="../assets/js/app.js"></script>
   <script>
-    // Set default language for this page
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.app) app.setLanguage('{{LANG}}');
+      if (window.app) app.setLanguage('te');
     });
   </script>
 </body>
