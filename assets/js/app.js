@@ -437,16 +437,6 @@ class TranslationManager {
     });
   }
 
-  get providerStatus() {
-    return this.getStatus();
-  }
-
-  get bestProvider() {
-    // Return the first active provider that isn't a user-key provider (free tier)
-    const free = this.activeProviders.find(p => !(p instanceof UserKeyProvider));
-    return free || this.activeProviders[0] || null;
-  }
-
   getStatus() {
     return this.providers.map(p => ({
       name: p.name,
@@ -454,6 +444,15 @@ class TranslationManager {
       circuitOpen: p.circuitOpen || false,
       failures: p.failures || 0
     }));
+  }
+
+  get providerStatus() {
+    return this.getStatus();
+  }
+
+  get bestProvider() {
+    const free = this.activeProviders.find(p => !(p instanceof UserKeyProvider));
+    return free || this.activeProviders[0] || null;
   }
 
   async translate(text, targetLang = 'te', sourceLang = 'Autodetect') {
@@ -534,9 +533,8 @@ class TranslationManager {
   }
 }
 
-// Instantiate the global Translator used throughout the app
-const Translator = new TranslationManager();
 
+const Translator = new TranslationManager();
 
 // ======================= PDF PROCESSOR =======================
 class PDFStoryExtractor {
@@ -583,6 +581,62 @@ class PDFStoryExtractor {
 }
 
 // ======================= MAIN APP =======================
+
+// ======================= THEATER STUB =======================
+// Minimal Theater + VoiceMapper to prevent crashes when clicking stories
+// Full theater implementation can be added later
+
+class VoiceMapper {
+  constructor() {
+    this.map = {};
+    this.emojiMap = {
+      narrator: '🌙', hero: '⚔️', heroine: '✨', villain: '🐍',
+      king: '👑', queen: '👸', sage: '📿', child: '🧒',
+      demon: '👹', guard: '🛡️', farmer: '🌾', merchant: '💰'
+    };
+  }
+  autoAssign(chars) {
+    chars.forEach((c, i) => {
+      if (!this.map[c]) {
+        const types = Object.keys(this.emojiMap);
+        const type = types[i % types.length];
+        this.map[c] = { type, emoji: this.emojiMap[type] };
+      }
+    });
+  }
+  assign(name, type) {
+    this.map[name] = { type, emoji: this.emojiMap[type] || '👤' };
+  }
+}
+
+class Theater {
+  constructor() {
+    this.voiceMapper = new VoiceMapper();
+    this.script = null;
+    this.lang = 'en';
+  }
+  loadScript(script, lang) {
+    this.script = script;
+    this.lang = lang;
+  }
+  open() {
+    console.log('[Theater] Opening theater (stub)');
+  }
+  play() {
+    console.log('[Theater] Playing (stub) — use browser TTS or implement audio player');
+    // Basic TTS fallback
+    if (this.script && this.script.lines) {
+      const utter = new SpeechSynthesisUtterance();
+      utter.lang = this.lang;
+      const line = this.script.lines[0];
+      utter.text = line.translated || line.text;
+      speechSynthesis.speak(utter);
+    }
+  }
+}
+
+window.theater = new Theater();
+
 class ChandamamaApp {
   constructor() {
     this.lang = 'te';
@@ -815,7 +869,26 @@ class ChandamamaApp {
 
   async translateAllStories() {
     const status = document.getElementById('pdfStatus');
-    const totalLines = this.stories.reduce((a, s) => a + (s.sentences?.length || 0), 0);
+
+    if (!this.stories || this.stories.length === 0) {
+      if (status) status.textContent = '⚠ No stories loaded. Please upload a PDF first.';
+      return;
+    }
+
+    // Ensure all stories have lines parsed
+    for (const story of this.stories) {
+      if (!story.lines) {
+        const sentences = story.sentences || [];
+        story.lines = sentences.map(text => ({ speaker: 'Narrator', text, original: text }));
+      }
+    }
+
+    const totalLines = this.stories.reduce((a, s) => a + (s.lines?.length || 0), 0);
+    if (totalLines === 0) {
+      if (status) status.textContent = '⚠ No text found in stories.';
+      return;
+    }
+
     if (totalLines > 5000) {
       const hasKey = Translator.activeProviders.some(p => p instanceof UserKeyProvider);
       if (!hasKey) {
@@ -823,26 +896,46 @@ class ChandamamaApp {
         if (!go) { this.openSettings(); return; }
       }
     }
-    if (status) status.textContent = `Translating ${this.stories.length} stories (~${totalLines} lines)...`;
+
+    if (status) {
+      status.innerHTML = `<div>Translating ${this.stories.length} stories (~${totalLines} lines) to <b>${this.lang.toUpperCase()}</b>...</div>
+        <div style="margin-top:6px;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+          <div id="allTransProgress" style="height:100%;width:0%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.3s;"></div>
+        </div>
+        <div id="allTransDetail" style="margin-top:4px;font-size:12px;color:#c4b5fd;">Starting...</div>`;
+    }
+
     Translator.cancel();
+    let globalDone = 0;
+
     for (let i = 0; i < this.stories.length; i++) {
       this.currentStory = this.stories[i];
-      if (!this.currentStory.lines) {
-        const sentences = this.currentStory.sentences || [];
-        this.currentStory.lines = sentences.map(text => ({ speaker: 'Narrator', text, original: text }));
-      }
       const texts = this.currentStory.lines.map(l => l.text);
+      const storyTotal = texts.length;
+
       try {
-        const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect', (done, total) => {
-          if (status) status.textContent = `Story ${i+1}/${this.stories.length}: ${this.currentStory.title} — line ${done}/${total}`;
+        const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect', (done, total, netDone, netTotal) => {
+          globalDone++;
+          const pct = Math.round((globalDone / totalLines) * 100);
+          const prog = document.getElementById('allTransProgress');
+          const detail = document.getElementById('allTransDetail');
+          if (prog) prog.style.width = pct + '%';
+          if (detail) detail.textContent = `Story ${i+1}/${this.stories.length}: ${this.currentStory.title || 'Untitled'} — line ${done}/${total} (${pct}%) | Provider: ${Translator.bestProvider?.name || '...'}`;
         });
+
         this.currentStory.lines.forEach((l, idx) => { l.translated = translated[idx]; });
       } catch (e) {
-        if (status) status.textContent = `Stopped at story ${i+1}: ${e.message}`;
+        const detail = document.getElementById('allTransDetail');
+        if (detail) detail.innerHTML = `<span style="color:#f87171;">Stopped at story ${i+1}: ${e.message}</span>`;
         return;
       }
     }
-    if (status) status.textContent = `All ${this.stories.length} stories translated! Cache: ${Translator.getCacheStats().size} entries`;
+
+    const stats = Translator.getCacheStats();
+    if (status) {
+      status.innerHTML = `<div style="color:#4ade80;">✓ All ${this.stories.length} stories translated!</div>
+        <div style="font-size:12px;color:#a78bfa;margin-top:4px;">Cache: ${stats.size} entries (${stats.cached} cached, ${stats.translated} new, ${stats.failed} failed)</div>`;
+    }
     this.renderStorySelector();
   }
 
