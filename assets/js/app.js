@@ -437,6 +437,16 @@ class TranslationManager {
     });
   }
 
+  get providerStatus() {
+    return this.getStatus();
+  }
+
+  get bestProvider() {
+    // Return the first active provider that isn't a user-key provider (free tier)
+    const free = this.activeProviders.find(p => !(p instanceof UserKeyProvider));
+    return free || this.activeProviders[0] || null;
+  }
+
   getStatus() {
     return this.providers.map(p => ({
       name: p.name,
@@ -523,6 +533,10 @@ class TranslationManager {
     return { size: this.cache.size(), ...this.stats };
   }
 }
+
+// Instantiate the global Translator used throughout the app
+const Translator = new TranslationManager();
+
 
 // ======================= PDF PROCESSOR =======================
 class PDFStoryExtractor {
