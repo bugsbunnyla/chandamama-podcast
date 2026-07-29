@@ -678,6 +678,50 @@ class Theater {
 window.theater = new Theater();
 
 // ======================= PDF PROCESSOR =======================
+class PDFStoryExtractor {
+  constructor() {
+    this.stories = [];
+  }
+  async loadPDF(arrayBuffer) {
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF.js not loaded. Please include pdf.min.js');
+    }
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const rawText = textContent.items.map(item => item.str).join(' ');
+      const cleanText = TextSanitizer.cleanPDFText(rawText);
+      pages.push({ pageNum: i, text: cleanText, rawText });
+    }
+    return pages;
+  }
+  detectStories(pages) {
+    const stories = [];
+    let current = { title: 'Story 1', pages: [], text: '', sentences: [] };
+    pages.forEach((p) => {
+      const sentences = TextSanitizer.splitIntoSentences(p.text);
+      if (sentences.length === 0) return;
+      const first = sentences[0];
+      const isTitle = /^\d+[.\)]?\s*[A-Z\u0900-\u097F\u0C00-\u0C7F]/.test(first) ||
+                      /^(Chapter|Story|Katha|కథ|అధ్యాయం|भाग|कथा|अध्याय)/i.test(first) ||
+                      (first.length < 60 && first.length > 5);
+      if (isTitle && current.sentences.length > 2) {
+        stories.push(current);
+        current = { title: first, pages: [p.pageNum], text: p.text, sentences };
+      } else {
+        current.pages.push(p.pageNum);
+        current.text += '\n' + p.text;
+        current.sentences.push(...sentences);
+      }
+    });
+    if (current.sentences.length > 0) stories.push(current);
+    return stories;
+  }
+}
+
+// ======================= MAIN APP =======================
 class ChandamamaApp {
   constructor() {
     this.lang = 'te';
