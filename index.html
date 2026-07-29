@@ -1,782 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chandamama Podcast Theater — Translate & Play</title>
-<style>
-:root {
-  --bg: #0b0b14; --panel: #131325; --accent: #e94560; --accent2: #0f3460;
-  --text: #eaeaea; --muted: #8a8a9e; --border: #252540;
-  --stage-bg: radial-gradient(ellipse at 50% 80%, #1a1a35 0%, #0b0b14 70%);
-  --success: #2ecc71; --warn: #f39c12; --info: #3498db;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text);
-  font-family: "Segoe UI", system-ui, sans-serif; overflow: hidden; }
-#app { display: flex; flex-direction: column; height: 100vh; }
-
-/* ── Top Bar ── */
-#topbar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 16px; background: var(--panel);
-  border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
-}
-#topbar h1 { font-size: 1.1rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
-#topbar .badge {
-  background: var(--accent2); color: #fff; font-size: 0.65rem;
-  padding: 2px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 1px;
-}
-#topbar .spacer { flex: 1; min-width: 20px; }
-#topbar .lang-group {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-  padding: 4px 10px;
-}
-#topbar .lang-group label {
-  font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
-}
-#topbar select {
-  background: transparent; color: var(--text); border: none;
-  font-size: 0.85rem; cursor: pointer; outline: none;
-}
-#topbar button {
-  background: var(--accent); color: #fff; border: none;
-  border-radius: 8px; padding: 7px 14px; font-size: 0.8rem;
-  cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
-}
-#topbar button:hover { opacity: 0.85; }
-#topbar button:disabled { background: #444; cursor: not-allowed; opacity: 0.4; }
-#topbar button.secondary { background: var(--accent2); }
-#topbar button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-#topbar button.ghost:hover { border-color: var(--accent); color: var(--text); }
-
-/* ── Main Layout ── */
-#main { display: flex; flex: 1; overflow: hidden; }
-
-#sidebar {
-  width: 300px; min-width: 240px; background: var(--panel);
-  border-right: 1px solid var(--border); display: flex;
-  flex-direction: column; overflow: hidden;
-}
-#sidebar .search-box {
-  padding: 10px 12px; border-bottom: 1px solid var(--border);
-}
-#sidebar .search-box input {
-  width: 100%; padding: 8px 12px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--bg);
-  color: var(--text); font-size: 0.85rem;
-}
-#sidebar .list-header {
-  padding: 8px 12px; font-size: 0.7rem; text-transform: uppercase;
-  color: var(--muted); letter-spacing: 1px; border-bottom: 1px solid var(--border);
-  display: flex; justify-content: space-between; align-items: center;
-}
-#episodeList { flex: 1; overflow-y: auto; padding: 6px; }
-
-.episode-tile {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 11px; border-radius: 10px; cursor: pointer;
-  transition: all 0.2s; margin-bottom: 5px; border: 1px solid transparent;
-}
-.episode-tile:hover { background: #1a1a35; }
-.episode-tile.selected {
-  background: rgba(233,69,96,0.08); border-color: var(--accent);
-}
-.episode-tile .thumb {
-  width: 40px; height: 40px; border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), #6c5ce7);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; flex-shrink: 0;
-}
-.episode-tile .info { flex: 1; min-width: 0; }
-.episode-tile .info h4 {
-  font-size: 0.85rem; font-weight: 600; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-}
-.episode-tile .info p {
-  font-size: 0.7rem; color: var(--muted); margin-top: 2px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.episode-tile .status {
-  font-size: 0.65rem; padding: 2px 7px; border-radius: 10px;
-  background: var(--bg); color: var(--muted); flex-shrink: 0;
-}
-.episode-tile.selected .status { background: var(--accent); color: #fff; }
-
-/* ── Stage ── */
-#stage {
-  flex: 1; display: flex; flex-direction: column;
-  background: var(--stage-bg); position: relative;
-}
-#stageHeader {
-  padding: 14px 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 14px;
-}
-#stageHeader .cover {
-  width: 56px; height: 56px; border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent), #6c5ce7);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.8rem; flex-shrink: 0;
-}
-#stageHeader .meta { flex: 1; min-width: 0; }
-#stageHeader .meta h2 { font-size: 1.1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#stageHeader .meta p { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
-#stageHeader .actions { display: flex; gap: 8px; flex-shrink: 0; }
-#stageHeader .actions button {
-  background: var(--accent2); color: var(--text); border: 1px solid var(--border);
-  border-radius: 8px; padding: 7px 14px; font-size: 0.78rem; cursor: pointer; white-space: nowrap;
-}
-#stageHeader .actions button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-#stageHeader .actions button:disabled { background: #222; color: #555; cursor: not-allowed; border-color: #333; }
-
-/* ── Progress ── */
-#progressArea {
-  padding: 0 20px 10px;
-}
-#progressBar {
-  width: 100%; height: 4px; background: var(--border);
-  border-radius: 2px; overflow: hidden;
-}
-#progressBar .fill {
-  height: 100%; background: var(--accent); width: 0%;
-  transition: width 0.3s ease;
-}
-#progressText {
-  font-size: 0.72rem; color: var(--muted); margin-top: 5px;
-  text-align: center;
-}
-
-/* ── Content ── */
-#contentArea {
-  flex: 1; overflow-y: auto; padding: 16px 20px;
-}
-#emptyState {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; height: 100%; text-align: center; color: var(--muted);
-}
-#emptyState .big-icon { font-size: 3.5rem; margin-bottom: 14px; opacity: 0.4; }
-#emptyState h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 6px; }
-#emptyState p { font-size: 0.85rem; max-width: 380px; line-height: 1.5; }
-
-#storyText { display: none; }
-.story-line {
-  padding: 7px 10px; border-radius: 8px; margin-bottom: 3px;
-  cursor: pointer; transition: all 0.15s;
-  border-left: 3px solid transparent; font-size: 0.98rem; line-height: 1.65;
-}
-.story-line:hover { background: rgba(255,255,255,0.03); }
-.story-line.active {
-  background: rgba(233,69,96,0.1); border-left-color: var(--accent); font-weight: 500;
-}
-.story-line .line-num {
-  display: inline-block; width: 34px; color: var(--muted);
-  font-size: 0.7rem; font-variant-numeric: tabular-nums; user-select: none;
-}
-.story-line .original {
-  display: block; font-size: 0.78rem; color: var(--muted); margin-top: 3px;
-  font-style: italic; padding-left: 34px;
-}
-
-/* ── Translation Banner ── */
-#translateBanner {
-  display: none; align-items: center; gap: 12px;
-  padding: 10px 20px; background: rgba(52,152,219,0.08);
-  border-bottom: 1px solid var(--border);
-}
-#translateBanner.show { display: flex; }
-#translateBanner p { font-size: 0.85rem; color: var(--info); flex: 1; }
-#translateBanner button {
-  background: var(--info); color: #fff; border: none;
-  border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer;
-}
-#translateBanner button:hover { opacity: 0.85; }
-
-/* ── Player Bar ── */
-#playerBar {
-  background: var(--panel); border-top: 1px solid var(--border);
-  padding: 10px 20px; display: flex; align-items: center; gap: 14px;
-  flex-shrink: 0;
-}
-#playerBar .track-info { width: 180px; min-width: 0; }
-#playerBar .track-info h4 {
-  font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-#playerBar .track-info p {
-  font-size: 0.68rem; color: var(--muted); margin-top: 2px;
-}
-#playerBar .controls {
-  display: flex; align-items: center; gap: 10px; flex: 1; justify-content: center;
-}
-#playerBar .controls button {
-  background: none; border: none; color: var(--text); font-size: 1.1rem;
-  cursor: pointer; padding: 7px; border-radius: 50%;
-  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px;
-}
-#playerBar .controls button:hover { background: rgba(255,255,255,0.08); }
-#playerBar .controls button.play {
-  width: 44px; height: 44px; background: var(--accent); font-size: 1.3rem;
-}
-#playerBar .controls button.play:hover { background: #ff6b81; }
-#playerBar .controls button:disabled { color: #444; cursor: not-allowed; }
-#playerBar .extra {
-  display: flex; align-items: center; gap: 10px; width: 180px; justify-content: flex-end;
-}
-#playerBar .extra label { font-size: 0.7rem; color: var(--muted); }
-#playerBar .extra input[type="range"] { width: 70px; accent-color: var(--accent); }
-#playerBar .extra .speed-val { font-size: 0.7rem; color: var(--muted); min-width: 30px; text-align: right; }
-
-/* ── Toast ── */
-#toast {
-  position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%);
-  background: var(--panel); color: var(--text); padding: 10px 18px;
-  border-radius: 10px; border: 1px solid var(--border);
-  font-size: 0.82rem; z-index: 1000; opacity: 0; transition: opacity 0.3s;
-  pointer-events: none; max-width: 80%; text-align: center;
-}
-#toast.show { opacity: 1; }
-
-#fileInput { display: none; }
-
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3a3a5c; }
-
-@media (max-width: 768px) {
-  #sidebar { width: 100%; position: absolute; z-index: 10; height: 100%; }
-  #sidebar.hidden { display: none; }
-  #stageHeader { flex-wrap: wrap; }
-  #topbar { gap: 6px; }
-  #topbar .lang-group { padding: 3px 8px; }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chandamama Moonlight Stories — Free Children's Podcast Theater</title>
+  <meta name="description" content="Ancient Sanskrit tales retold in 8 languages. PDF-to-podcast theater with character voices for children.">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <!-- PDF.js for client-side PDF parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
-<div id="app">
-  <div id="topbar">
-    <h1>🌙 Chandamama</h1>
-    <span class="badge">Translate & Play</span>
-    <span class="spacer"></span>
+  <div class="stars-bg"></div>
 
-    <div class="lang-group">
-      <label>📄 PDF Lang</label>
-      <select id="sourceLang">
-        <option value="auto">🔍 Auto-detect</option>
-        <option value="sa">🇮🇳 Sanskrit</option>
-        <option value="te">🇮🇳 Telugu</option>
-        <option value="hi">🇮🇳 Hindi</option>
-        <option value="ta">🇮🇳 Tamil</option>
-        <option value="kn">🇮🇳 Kannada</option>
-        <option value="ml">🇮🇳 Malayalam</option>
-        <option value="en">🇬🇧 English</option>
-      </select>
+  <header class="hero">
+    <div class="moon">
+      <div class="moon-face">🌙</div>
+      <div class="moon-glow"></div>
     </div>
-
-    <div class="lang-group">
-      <label>🎯 Translate to</label>
-      <select id="targetLang">
-        <option value="en">🇬🇧 English</option>
-        <option value="de">🇩🇪 German</option>
-        <option value="fr">🇫🇷 French</option>
-        <option value="es">🇪🇸 Spanish</option>
-        <option value="it">🇮🇹 Italian</option>
-        <option value="te">🇮🇳 Telugu</option>
-        <option value="hi">🇮🇳 Hindi</option>
-      </select>
+    <h1>Chandamama</h1>
+    <p class="subtitle">Moonlight Stories for Little Travelers</p>
+    <p class="tagline">Ancient Sanskrit tales, retold with drama character voices in 8 languages — completely free, forever. Upload a PDF, pick a story, assign voices, and listen.</p>
+    <div class="hero-badges">
+      <span class="badge">🎭 Theater</span>
+      <span class="badge">📖 Storybook</span>
+      <span class="badge">🎧 Podcast</span>
+      <span class="badge">📄 PDF Import</span>
+      <span class="badge">🌐 8 Languages</span>
     </div>
+  </header>
 
-    <button onclick="document.getElementById('fileInput').click()">📁 Upload</button>
-    <button class="secondary" id="downloadBtn" onclick="downloadText()" disabled>💾 Save</button>
-  </div>
+  <main>
+    <!-- Language Selection -->
+    <section>
+      <h2>Choose Your Language</h2>
+      <p class="section-desc">Select the language for translation and voice output. The theater will use your browser's built-in voices.</p>
+      <div class="grid" id="langGrid"></div>
+      <p class="pdf-status" id="currentLangLabel" style="margin-top:10px; font-size:0.85rem; color:var(--moon-gold);">Target: TE</p>
+    </section>
 
-  <div id="main">
-    <div id="sidebar">
-      <div class="search-box">
-        <input type="text" id="searchEpisodes" placeholder="🔍 Search episodes..." oninput="filterEpisodes(this.value)">
+    <!-- PDF Upload -->
+    <section>
+      <h2>📄 Import from PDF</h2>
+      <p class="section-desc">Upload a Chandamama PDF. We'll extract pages, detect stories/episodes, and let you dramatize them with character voices.</p>
+      <div class="pdf-zone" id="pdfDropZone" onclick="document.getElementById('pdfInput').click()">
+        <div class="pdf-icon">📚</div>
+        <h3>Drop PDF here or click to browse</h3>
+        <p>Supports storybooks, comics, and scanned tales</p>
+        <input type="file" id="pdfInput" accept="application/pdf">
       </div>
-      <div class="list-header">
-        <span>📚 Episodes</span>
-        <span id="epCount">0</span>
+      <div class="pdf-status" id="pdfStatus"></div>
+    </section>
+
+    <!-- Story Selector -->
+    <section id="storySelector" style="display:none;"></section>
+
+    <!-- Story Editor / Theater Builder -->
+    <section id="storyEditor" style="display:none;"></section>
+
+    <!-- About -->
+    <section style="background: rgba(255,255,255,0.05); border-radius: var(--radius); padding: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+      <h2 style="color:var(--moon-gold); text-align:center; margin-bottom:12px;">About Chandamama</h2>
+      <p style="color: rgba(255,255,255,0.85); margin-bottom: 12px; font-size: 1rem;">In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
+      <p style="color: rgba(255,255,255,0.85); margin-bottom: 12px; font-size: 1rem;">These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
+      <p style="color: rgba(255,255,255,0.85); font-size: 1rem;">Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="https://archive.org/details/Chandamama_Sanskrit_1999" target="_blank" rel="noopener" style="color: var(--moon-gold); text-decoration: none; font-weight: 600; border-bottom: 2px solid var(--moon-gold); padding-bottom: 2px;">📚 View Original Source on Archive.org</a>
       </div>
-      <div id="episodeList"></div>
-    </div>
+    </section>
+  </main>
 
-    <div id="stage">
-      <div id="stageHeader">
-        <div class="cover" id="stageCover">📖</div>
-        <div class="meta">
-          <h2 id="stageTitle">No Episode Selected</h2>
-          <p id="stageSubtitle">Choose an episode or upload a PDF to begin</p>
-        </div>
-        <div class="actions">
-          <button id="extractBtn" onclick="extractText()" disabled>📖 Extract</button>
-          <button id="translateBtn" onclick="translateStory()" disabled>🌐 Translate</button>
-          <button id="playAllBtn" onclick="togglePlay()" disabled>▶ Play</button>
-        </div>
-      </div>
+  <footer>
+    <p>Made with 🌙 for children everywhere. Source: <a href="https://archive.org/details/Chandamama_Sanskrit_1999" style="color: var(--moon-gold); text-decoration: none;">Chandamama Sanskrit 1999</a> via Archive.org.</p>
+    <p>Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" style="color: var(--moon-gold);">CC BY-SA 4.0</a>.</p>
+  </footer>
 
-      <div id="progressArea" style="display:none;">
-        <div id="progressBar"><div class="fill" id="progressFill"></div></div>
-        <div id="progressText">Ready</div>
-      </div>
+  <!-- Theater Overlay (injected by JS) -->
+  <!-- Podcast Bar (injected by JS) -->
 
-      <div id="translateBanner">
-        <p>🌐 Text extracted in original language. Click <strong>Translate</strong> to convert to your selected language.</p>
-        <button onclick="translateStory()">Translate Now</button>
-      </div>
-
-      <div id="contentArea">
-        <div id="emptyState">
-          <div class="big-icon">🌙</div>
-          <h3>Chandamama Podcast Theater</h3>
-          <p><strong>Step 1:</strong> Pick an episode or upload PDF.<br>
-             <strong>Step 2:</strong> Click <strong>Extract</strong> to read the text.<br>
-             <strong>Step 3:</strong> Click <strong>Translate</strong> to convert language.<br>
-             <strong>Step 4:</strong> Click <strong>Play</strong> to listen in your language.</p>
-        </div>
-        <div id="storyText"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="playerBar">
-    <div class="track-info">
-      <h4 id="trackTitle">--</h4>
-      <p id="trackPos">Line 0 / 0</p>
-    </div>
-    <div class="controls">
-      <button onclick="prevLine()" id="btnPrev" disabled>⏮</button>
-      <button onclick="togglePlay()" class="play" id="btnPlay" disabled>▶</button>
-      <button onclick="nextLine()" id="btnNext" disabled>⏭</button>
-    </div>
-    <div class="extra">
-      <label>Speed</label>
-      <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1" oninput="updateSpeed(this.value)">
-      <span class="speed-val" id="speedValue">1.0x</span>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-<input type="file" id="fileInput" accept=".pdf" onchange="handleFileUpload(event)">
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-/* ── State ── */
-let pdfDoc = null;
-let originalLines = [];      // raw extracted lines
-let storyLines = [];         // lines currently displayed (translated or original)
-let isTranslated = false;
-let currentLine = 0;
-let isPlaying = false;
-let synth = window.speechSynthesis;
-let utterance = null;
-let currentSpeed = 1;
-let episodes = [];
-let currentEpisodeIdx = -1;
-let isExtracting = false;
-let isTranslating = false;
-
-const REPO_BASE = 'https://raw.githubusercontent.com/bugsbunnyla/chandamama-podcast/main/pdf/';
-const API_BASE  = 'https://api.github.com/repos/bugsbunnyla/chandamama-podcast/contents/pdf';
-
-/* Language maps for TTS */
-const TTS_LANG = {
-  en: 'en-US', de: 'de-DE', fr: 'fr-FR', es: 'es-ES',
-  it: 'it-IT', te: 'te-IN', hi: 'hi-IN'
-};
-
-/* MyMemory language codes */
-const MM_LANG = {
-  en: 'en', de: 'de', fr: 'fr', es: 'es', it: 'it', te: 'te', hi: 'hi', sa: 'sa'
-};
-
-const DEFAULT_EPISODE = { name: '1999December.pdf', title: 'December 1999', desc: 'Classic Chandamama stories' };
-
-/* ── Helpers ── */
-function showToast(msg, type="info") {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.borderColor = type === "error" ? "#e94560" : type === "success" ? "#2ecc71" : type === "warn" ? "#f39c12" : "#252540";
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-function setStage(title, subtitle, icon) {
-  document.getElementById('stageTitle').textContent = title;
-  document.getElementById('stageSubtitle').textContent = subtitle;
-  document.getElementById('stageCover').textContent = icon || '📖';
-}
-
-function updateTrackInfo() {
-  const title = currentEpisodeIdx >= 0 ? episodes[currentEpisodeIdx].title : '--';
-  document.getElementById('trackTitle').textContent = title;
-  document.getElementById('trackPos').textContent = `Line ${currentLine + 1} / ${storyLines.length}`;
-}
-
-function setProgress(pct, text) {
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressText').textContent = text || '';
-  document.getElementById('progressArea').style.display = pct > 0 && pct < 100 ? 'block' : 'none';
-}
-
-function setButtons(state) {
-  const extractBtn = document.getElementById('extractBtn');
-  const translateBtn = document.getElementById('translateBtn');
-  const playAllBtn = document.getElementById('playAllBtn');
-  const btnPlay = document.getElementById('btnPlay');
-  const btnPrev = document.getElementById('btnPrev');
-  const btnNext = document.getElementById('btnNext');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const banner = document.getElementById('translateBanner');
-
-  banner.classList.remove('show');
-
-  if (state === 'empty') {
-    extractBtn.disabled = true; translateBtn.disabled = true; playAllBtn.disabled = true;
-    btnPlay.disabled = true; btnPrev.disabled = true; btnNext.disabled = true;
-    downloadBtn.disabled = true;
-  } else if (state === 'loaded') {
-    extractBtn.disabled = false; translateBtn.disabled = true; playAllBtn.disabled = true;
-    btnPlay.disabled = true; btnPrev.disabled = true; btnNext.disabled = true;
-    downloadBtn.disabled = true;
-  } else if (state === 'extracted') {
-    extractBtn.disabled = false; translateBtn.disabled = false; playAllBtn.disabled = true;
-    btnPlay.disabled = true; btnPrev.disabled = true; btnNext.disabled = true;
-    downloadBtn.disabled = false;
-    const src = document.getElementById('sourceLang').value;
-    const tgt = document.getElementById('targetLang').value;
-    if (src !== tgt && src !== 'auto') banner.classList.add('show');
-  } else if (state === 'translated') {
-    extractBtn.disabled = false; translateBtn.disabled = false; playAllBtn.disabled = false;
-    btnPlay.disabled = false; btnPrev.disabled = currentLine <= 0;
-    btnNext.disabled = currentLine >= storyLines.length - 1;
-    downloadBtn.disabled = false;
-  } else if (state === 'playing') {
-    extractBtn.disabled = true; translateBtn.disabled = true; playAllBtn.disabled = false;
-    btnPlay.disabled = false; btnPrev.disabled = currentLine <= 0;
-    btnNext.disabled = currentLine >= storyLines.length - 1;
-    downloadBtn.disabled = false;
-  }
-}
-
-/* ── Fetch Episodes ── */
-async function fetchEpisodes() {
-  showToast("Loading episodes from GitHub...");
-  try {
-    const res = await fetch(API_BASE);
-    if (!res.ok) throw new Error("API limit");
-    const data = await res.json();
-    episodes = data
-      .filter(item => item.type === 'file' && item.name.endsWith('.pdf'))
-      .map(item => {
-        const name = item.name.replace(/\.pdf$/i, '');
-        return { name: item.name, title: name.replace(/([a-z])([A-Z])/g, '$1 $2'), desc: 'Chandamama issue', url: item.download_url };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  } catch (e) {
-    showToast("Using default episode list", "warn");
-    episodes = [DEFAULT_EPISODE];
-  }
-  renderEpisodes();
-  document.getElementById('epCount').textContent = episodes.length;
-  const defIdx = episodes.findIndex(e => e.name === DEFAULT_EPISODE.name);
-  if (defIdx >= 0) selectEpisode(defIdx, true);
-}
-
-function renderEpisodes(filter = '') {
-  const list = document.getElementById('episodeList');
-  const filtered = episodes.filter(e => e.title.toLowerCase().includes(filter.toLowerCase()) || e.name.toLowerCase().includes(filter.toLowerCase()));
-  list.innerHTML = filtered.map((ep, idx) => {
-    const realIdx = episodes.indexOf(ep);
-    const isSel = realIdx === currentEpisodeIdx;
-    return `
-      <div class="episode-tile ${isSel ? 'selected' : ''}" onclick="selectEpisode(${realIdx})">
-        <div class="thumb">📚</div>
-        <div class="info"><h4>${ep.title}</h4><p>${ep.desc}</p></div>
-        <div class="status">${isSel ? '● Loaded' : ''}</div>
-      </div>`;
-  }).join('');
-}
-function filterEpisodes(q) { renderEpisodes(q); }
-
-/* ── Select / Load ── */
-async function selectEpisode(idx, autoLoad = false) {
-  currentEpisodeIdx = idx;
-  renderEpisodes();
-  const ep = episodes[idx];
-  setStage(ep.title, ep.desc + " — Click Extract to read the story", "📖");
-  setButtons('empty');
-  document.getElementById('emptyState').style.display = 'flex';
-  document.getElementById('storyText').style.display = 'none';
-  originalLines = []; storyLines = []; isTranslated = false; currentLine = 0;
-  updateTrackInfo();
-  if (autoLoad) await loadPdfFromUrl(ep.url || (REPO_BASE + ep.name));
-}
-
-async function handleFileUpload(e) {
-  const file = e.target.files[0]; if (!file) return;
-  currentEpisodeIdx = -1; renderEpisodes();
-  setStage(file.name, "Uploaded — Click Extract to read", "📁");
-  setButtons('empty');
-  document.getElementById('emptyState').style.display = 'flex';
-  document.getElementById('storyText').style.display = 'none';
-  originalLines = []; storyLines = []; isTranslated = false; currentLine = 0;
-  updateTrackInfo();
-  await loadPdf(file);
-}
-
-async function loadPdfFromUrl(url) {
-  showToast("Loading PDF...");
-  setProgress(15, "Downloading PDF...");
-  try {
-    const loadingTask = pdfjsLib.getDocument(url);
-    pdfDoc = await loadingTask.promise;
-    setProgress(0);
-    showToast(`${pdfDoc.numPages} pages loaded. Click Extract.`, "success");
-    setStage(episodes[currentEpisodeIdx]?.title || 'PDF', `${pdfDoc.numPages} pages — Ready to extract`, "📖");
-    setButtons('loaded');
-  } catch (err) { setProgress(0); showToast("Error: " + err.message, "error"); }
-}
-
-async function loadPdf(source) {
-  showToast("Loading PDF..."); setProgress(15, "Reading file...");
-  try {
-    const arrayBuffer = await source.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    pdfDoc = await loadingTask.promise;
-    setProgress(0);
-    showToast(`${pdfDoc.numPages} pages loaded. Click Extract.`, "success");
-    setStage(source.name, `${pdfDoc.numPages} pages — Ready to extract`, "📁");
-    setButtons('loaded');
-  } catch (err) { setProgress(0); showToast("Error: " + err.message, "error"); }
-}
-
-/* ── Extract ── */
-async function extractText() {
-  if (!pdfDoc || isExtracting) return;
-  isExtracting = true; setButtons('empty');
-  showToast("Extracting text from PDF...");
-  document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('storyText').style.display = 'block';
-  document.getElementById('storyText').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">⏳ Extracting text...</div>';
-  originalLines = []; storyLines = []; isTranslated = false; currentLine = 0;
-
-  try {
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      const page = await pdfDoc.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(' ');
-      const lines = pageText.split(/[.!?।]+/).map(l => l.trim()).filter(l => l.length > 8);
-      originalLines.push(...lines);
-      setProgress(Math.round((i / pdfDoc.numPages) * 85) + 10, `Extracting page ${i} / ${pdfDoc.numPages}...`);
-      await new Promise(r => setTimeout(r, 5));
-    }
-    storyLines = [...originalLines];
-    renderStory();
-    setProgress(100, "Extraction complete!");
-    setTimeout(() => setProgress(0), 700);
-    showToast(`${storyLines.length} lines extracted.`, "success");
-    setStage(episodes[currentEpisodeIdx]?.title || 'Story', `${storyLines.length} lines — Translate or Play`, "🎧");
-    setButtons('extracted');
-    currentLine = 0; updateTrackInfo();
-  } catch (err) {
-    setProgress(0); showToast("Extract error: " + err.message, "error"); setButtons('loaded');
-  } finally { isExtracting = false; }
-}
-
-/* ── Translate ── */
-async function translateStory() {
-  if (!originalLines.length || isTranslating) return;
-  const srcSel = document.getElementById('sourceLang').value;
-  const tgtSel = document.getElementById('targetLang').value;
-  if (srcSel === tgtSel) {
-    storyLines = [...originalLines]; isTranslated = false;
-    renderStory(); showToast("Source and target are the same — showing original.", "warn");
-    setButtons('translated'); return;
-  }
-  isTranslating = true; setButtons('empty');
-  showToast(`Translating to ${document.getElementById('targetLang').selectedOptions[0].text}...`);
-  storyLines = []; renderStory();
-
-  const srcCode = srcSel === 'auto' ? 'Autodetect' : (MM_LANG[srcSel] || srcSel);
-  const tgtCode = MM_LANG[tgtSel] || tgtSel;
-  const pair = `${srcCode}|${tgtCode}`;
-
-  // Batch in groups of 3 to respect rate limits
-  const batchSize = 3;
-  const translated = [];
-  for (let i = 0; i < originalLines.length; i += batchSize) {
-    const batch = originalLines.slice(i, i + batchSize);
-    setProgress(Math.round((i / originalLines.length) * 90) + 5,
-      `Translating ${i + 1}–${Math.min(i + batchSize, originalLines.length)} / ${originalLines.length}...`);
-    const results = await Promise.all(batch.map(line => translateLine(line, pair)));
-    translated.push(...results);
-    await new Promise(r => setTimeout(r, 300)); // rate limit buffer
-  }
-
-  storyLines = translated;
-  isTranslated = true;
-  setProgress(100, "Translation complete!");
-  setTimeout(() => setProgress(0), 700);
-  showToast(`Translated ${storyLines.length} lines! Click Play to listen.`, "success");
-  setStage(episodes[currentEpisodeIdx]?.title || 'Story',
-    `${storyLines.length} lines — Playing in ${document.getElementById('targetLang').selectedOptions[0].text}`, "🌍");
-  setButtons('translated');
-  currentLine = 0; renderStory(); updateTrackInfo();
-  isTranslating = false;
-}
-
-async function translateLine(text, pair) {
-  try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.responseStatus === 200 && data.responseData?.translatedText) {
-      return data.responseData.translatedText;
-    }
-    return text; // fallback to original
-  } catch (e) {
-    return text; // fallback
-  }
-}
-
-/* ── Render ── */
-function renderStory() {
-  const container = document.getElementById('storyText');
-  container.innerHTML = storyLines.map((line, idx) => {
-    const orig = isTranslated && originalLines[idx] && originalLines[idx] !== line
-      ? `<span class="original">${escapeHtml(originalLines[idx])}</span>` : '';
-    return `
-      <div class="story-line ${idx === currentLine ? 'active' : ''}" data-idx="${idx}" onclick="jumpToLine(${idx})">
-        <span class="line-num">${String(idx + 1).padStart(3, '0')}</span>${escapeHtml(line)}${orig}
-      </div>`;
-  }).join('');
-  scrollToLine(currentLine);
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function scrollToLine(idx) {
-  const el = document.querySelector(`.story-line[data-idx="${idx}"]`);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function jumpToLine(idx) {
-  stopSpeaking(); currentLine = idx;
-  renderStory(); updateTrackInfo();
-  setButtons(isPlaying ? 'playing' : (storyLines.length ? 'translated' : 'extracted'));
-  if (isPlaying) speakCurrentLine();
-}
-
-/* ── TTS / Play ── */
-function getTTSLang() {
-  const tgt = document.getElementById('targetLang').value;
-  return TTS_LANG[tgt] || 'en-US';
-}
-
-function speakCurrentLine() {
-  if (!storyLines.length) return;
-  if (synth.speaking) synth.cancel();
-  const text = storyLines[currentLine];
-  if (!text || !text.trim()) { currentLine++; if (currentLine < storyLines.length) speakCurrentLine(); return; }
-
-  utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = getTTSLang();
-  utterance.rate = currentSpeed;
-
-  utterance.onend = () => {
-    currentLine++;
-    if (currentLine < storyLines.length) {
-      renderStory(); updateTrackInfo(); setButtons('playing'); speakCurrentLine();
-    } else {
-      isPlaying = false; updatePlayButton();
-      showToast("Finished! 🎉", "success"); setButtons('translated');
-    }
-  };
-  utterance.onerror = (e) => {
-    if (e.error !== 'canceled' && e.error !== 'interrupted') {
-      showToast("Speech error: " + e.error, "error"); isPlaying = false;
-      updatePlayButton(); setButtons('translated');
-    }
-  };
-  synth.speak(utterance);
-  renderStory(); scrollToLine(currentLine); updateTrackInfo();
-}
-
-function togglePlay() {
-  if (isPlaying) {
-    stopSpeaking(); isPlaying = false;
-  } else {
-    if (!storyLines.length) { showToast("Extract and translate first!", "warn"); return; }
-    if (currentLine >= storyLines.length) currentLine = 0;
-    isPlaying = true; speakCurrentLine();
-  }
-  updatePlayButton();
-  setButtons(isPlaying ? 'playing' : 'translated');
-}
-
-function updatePlayButton() {
-  const icon = isPlaying ? '⏸' : '▶';
-  document.getElementById('btnPlay').textContent = icon;
-  document.getElementById('playAllBtn').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
-}
-
-function stopSpeaking() { if (synth.speaking) synth.cancel(); }
-
-function nextLine() {
-  if (currentLine < storyLines.length - 1) {
-    stopSpeaking(); currentLine++; renderStory(); updateTrackInfo();
-    setButtons(isPlaying ? 'playing' : 'translated');
-    if (isPlaying) speakCurrentLine();
-  }
-}
-
-function prevLine() {
-  if (currentLine > 0) {
-    stopSpeaking(); currentLine--; renderStory(); updateTrackInfo();
-    setButtons(isPlaying ? 'playing' : 'translated');
-    if (isPlaying) speakCurrentLine();
-  }
-}
-
-function updateSpeed(val) {
-  currentSpeed = parseFloat(val);
-  document.getElementById('speedValue').textContent = currentSpeed.toFixed(1) + 'x';
-  if (isPlaying) { stopSpeaking(); setTimeout(() => speakCurrentLine(), 100); }
-}
-
-function downloadText() {
-  if (!storyLines.length) return;
-  const header = isTranslated ? `Translated to: ${document.getElementById('targetLang').selectedOptions[0].text}\n\n` : '';
-  const text = header + storyLines.join("\n\n");
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (episodes[currentEpisodeIdx]?.title || 'story') + (isTranslated ? '-translated' : '') + '.txt';
-  a.click(); URL.revokeObjectURL(url);
-  showToast("Text saved!", "success");
-}
-
-/* ── Keyboard ── */
-document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
-    e.preventDefault(); togglePlay();
-  } else if (e.code === 'ArrowRight') { nextLine(); }
-  else if (e.code === 'ArrowLeft') { prevLine(); }
-});
-
-/* ── Init ── */
-fetchEpisodes();
-</script>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>
