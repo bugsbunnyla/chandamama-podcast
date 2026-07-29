@@ -1,191 +1,88 @@
 <!DOCTYPE html>
-<html lang="te">
+<html lang="{{LANG}}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chandamama — Telugu | Moonlight Stories</title>
-  <meta name="description" content="Chandamama Telugu episodes: enacted multi-cast stories for children.">
+  <title>Chandamama — {{LANG_NAME}} | Moonlight Stories</title>
+  <meta name="description" content="Chandamama {{LANG_NAME}} episodes: enacted multi-cast stories for children.">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
-  <link rel="alternate" type="application/rss+xml" title="Chandamama Telugu" href="../rss/te.xml">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body class="lang-page">
   <div class="stars-bg"></div>
   <header class="hero">
-    <a href="../index.html" class="back-link">← Back to All Languages</a>
-    <div class="moon"><div class="moon-face">🇮🇳</div><div class="moon-glow"></div></div>
-    <h1>Chandamama — Telugu</h1>
-    <p class="subtitle">తెలుగు</p>
+    <a href="../index.html" class="back-link" style="display:inline-block; margin-bottom:12px; color:var(--moon-gold); text-decoration:none; font-weight:600;">← Back to All Languages</a>
+    <div class="moon">
+      <div class="moon-face">{{FLAG}}</div>
+      <div class="moon-glow"></div>
+    </div>
+    <h1>Chandamama — {{LANG_NAME}}</h1>
+    <p class="subtitle">{{LANG_NATIVE}}</p>
     <p class="tagline">Narrated by Uncle Moonbeam & The Royal Cast</p>
     <div class="hero-badges">
       <span class="badge">🎭 Multi-Cast Theater</span>
-      <span class="badge">🎧 3 Episodes</span>
-      <span class="badge">📡 <a href="../rss/te.xml" style="color:inherit;text-decoration:underline;">RSS Feed</a></span>
+      <span class="badge">🎧 Podcast Player</span>
+      <span class="badge">📄 PDF Import</span>
     </div>
   </header>
+
   <main style="max-width: 900px;">
-    <div class="voice-notice">
-      <span>🎙️</span>
-      <div>
+    <!-- Voice Notice -->
+    <div class="voice-notice" style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-start; border: 1px solid rgba(255,255,255,0.1);">
+      <span style="font-size: 1.4rem;">🎙️</span>
+      <div style="font-size: 0.9rem; color: rgba(255,255,255,0.85);">
         <strong>Theater Mode uses your browser's built-in voices.</strong><br>
         Each character speaks with a distinct voice, pitch, and speed. For best results, use Chrome, Edge, or Safari.
+        <div style="margin-top: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.5);">
+          Voices available: 👦 Kid Boy, 👧 Kid Girl, 👨 Adult Male, 👩 Adult Female, 👴 Elder Male, 👵 Elder Female, 🧓 Old Age Male, 🧓 Old Age Female, 🐾 Animal
+        </div>
       </div>
     </div>
+
+    <!-- PDF Upload -->
+    <section>
+      <h2>📄 Import from PDF</h2>
+      <p class="section-desc">Upload a PDF to extract stories/episodes. Select pages, assign character voices, and create a dramatized podcast.</p>
+      <div class="pdf-zone" id="pdfDropZone" onclick="document.getElementById('pdfInput').click()">
+        <div class="pdf-icon">📚</div>
+        <h3>Drop PDF here or click to browse</h3>
+        <p>Chandamama issues, storybooks, or scanned tales</p>
+        <input type="file" id="pdfInput" accept="application/pdf">
+      </div>
+      <div class="pdf-status" id="pdfStatus"></div>
+    </section>
+
+    <!-- Story Selector -->
+    <section id="storySelector" style="display:none;"></section>
+
+    <!-- Story Editor -->
+    <section id="storyEditor" style="display:none;"></section>
+
+    <!-- Pre-loaded Episodes (optional fallback) -->
     <section>
       <h2>Episodes</h2>
-      <div class="episode-list" id="episodeList"></div>
+      <div class="episode-list" id="episodeList">
+        <!-- Populated from stories/{{LANG}}.json if available -->
+        <div class="episode-card" style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">
+          <p>Upload a PDF above to see episodes, or place <code>stories/{{LANG}}.json</code> in the repo.</p>
+        </div>
+      </div>
     </section>
   </main>
+
   <footer>
     <p>Made with 🌙 for children everywhere.</p>
-    <p><a href="../index.html">← Back to All Languages</a></p>
+    <p><a href="../index.html" style="color: var(--moon-gold); text-decoration: none;">← Back to All Languages</a></p>
   </footer>
-  <script src="../assets/js/theater.js"></script>
-  <script src="../assets/js/player.js"></script>
+
+  <script src="../assets/js/app.js"></script>
   <script>
-    const EPISODES = [
-      { id: "ep00", title: "Welcome to Chandamama — Uncle Moonbeam's Story House", subtitle: "A warm introduction to the magical world of Chandamama", art: "🌙", duration: "12:00", date: "Dec 1999", ages: "All ages", audio: "../audio/te/ep00.mp3", cast: ["Uncle Moonbeam", "Little Star"] },
-      { id: "ep01", title: "The King and the Queen — The Lamp of Dharma", subtitle: "From the cover of December 1999: King Vikramaditya sees a mystery beyond the seven hills.", art: "👑", duration: "22:00", date: "Dec 1999", ages: "7–12", audio: "../audio/te/ep01.mp3", cast: ["Uncle Moonbeam", "King Vikramaditya", "Queen Ananya", "Minister Gopal", "Captain Veer", "Old Sage"] },
-      { id: "ep02", title: "Dr. Rabbit's Puzzle — The Maze of Friendship", subtitle: "From pages 2–3 of December 1999: Help Smita find her way through the magical maze!", art: "🐰", duration: "18:00", date: "Dec 1999", ages: "4–8", audio: "../audio/te/ep02.mp3", cast: ["Uncle Moonbeam", "Smita", "Dr. Rabbit", "Mama", "Mr. Squirrel", "Butterfly Queen"] }
-    ];
-
-    function renderEpisodes() {
-      const container = document.getElementById('episodeList');
-      EPISODES.forEach(ep => {
-        const card = document.createElement('div');
-        card.className = 'episode-card';
-        card.dataset.audio = ep.audio;
-        card.dataset.title = ep.title;
-        card.dataset.lang = 'తెలుగు';
-        card.id = ep.id;
-        card.innerHTML = `
-          <div class="episode-art">${ep.art}</div>
-          <div class="episode-info">
-            <h3>${ep.title}</h3>
-            <div class="episode-meta">
-              <span>⏱️ ${ep.duration}</span>
-              <span>📅 ${ep.date}</span>
-              <span>👶 Ages ${ep.ages}</span>
-              <span>🎭 ${ep.cast.length} Characters</span>
-            </div>
-            <p class="episode-desc">${ep.subtitle}</p>
-            <div class="episode-actions">
-              <button class="btn-play-ep" onclick="startTheater('${ep.id}')">🎭 Listen in Theater</button>
-              <a class="btn-download" href="${ep.audio}" download>⬇️ Download MP3</a>
-              <button class="btn-transcript" onclick="toggleTranscript('${ep.id}')">📄 Transcript</button>
-              <button class="btn-cast" onclick="toggleCast('${ep.id}')">🎭 Cast</button>
-              <button class="btn-cast" onclick="toggleCharacterReel('${ep.id}')" style="background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;border-color:transparent;">🎭 Reels</button>
-            </div>
-            <div class="character-reel-bar" id="reel-bar-${ep.id}" style="margin-top:10px; display:none;">
-              <span style="font-size:0.8rem; color:var(--text-light); margin-right:8px;">🎭 Character Reel:</span>
-              <span id="reel-chars-${ep.id}"></span>
-            </div>
-            <div class="transcript-panel" id="transcript-${ep.id}"><h4>📄 Transcript — ${ep.title}</h4><div id="transcript-content-${ep.id}"><p><em>Loading transcript...</em></p></div></div>
-            <div class="cast-panel" id="cast-${ep.id}"><h4>🎭 Cast — ${ep.title}</h4><div class="cast-panel-grid" id="cast-content-${ep.id}"></div></div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    async function startTheater(episodeId) {
-      if (!window.speechSynthesis) { alert('Your browser does not support Theater Mode. Try Chrome, Edge, or Safari.'); return; }
-      await ChandamamaTheater.openEpisode('../stories/en.json', episodeId);
-    }
-
-    async function toggleTranscript(episodeId) {
-      const panel = document.getElementById('transcript-' + episodeId);
-      const content = document.getElementById('transcript-content-' + episodeId);
-      const isActive = panel.classList.contains('active');
-      document.querySelectorAll('.transcript-panel, .cast-panel').forEach(p => p.classList.remove('active'));
-      if (isActive) return;
-      panel.classList.add('active');
-      if (content.dataset.loaded !== 'true') {
-        try {
-          const resp = await fetch('../stories/en.json');
-          const story = await resp.json();
-          const episode = story.episodes.find(e => e.id === episodeId);
-          if (episode && episode.script) {
-            content.innerHTML = episode.script.map((line, i) => `
-              <div class="transcript-line" data-index="${i}" onclick="jumpToLine('${episodeId}', ${i})">
-                <div class="transcript-speaker">${line.speaker}</div>
-                <div class="transcript-text">${line.text}</div>
-              </div>
-            `).join('');
-            content.dataset.loaded = 'true';
-          }
-        } catch (e) { content.innerHTML = '<p><em>Could not load transcript.</em></p>'; }
-      }
-    }
-
-    async function toggleCast(episodeId) {
-      const panel = document.getElementById('cast-' + episodeId);
-      const content = document.getElementById('cast-content-' + episodeId);
-      const isActive = panel.classList.contains('active');
-      document.querySelectorAll('.transcript-panel, .cast-panel').forEach(p => p.classList.remove('active'));
-      if (isActive) return;
-      panel.classList.add('active');
-      if (content.dataset.loaded !== 'true') {
-        try {
-          const resp = await fetch('../stories/en.json');
-          const story = await resp.json();
-          const episode = story.episodes.find(e => e.id === episodeId);
-          if (episode && episode.cast) {
-            content.innerHTML = episode.cast.map(c => `
-              <div class="cast-panel-card">
-                <div class="cast-panel-emoji">${c.emoji}</div>
-                <div class="cast-panel-name">${c.name}</div>
-                <div class="cast-panel-role">${c.role}</div>
-                <div class="cast-panel-desc">${c.description}</div>
-              </div>
-            `).join('');
-            content.dataset.loaded = 'true';
-          }
-        } catch (e) { content.innerHTML = '<p><em>Could not load cast.</em></p>'; }
-      }
-    }
-
-    function jumpToLine(episodeId, lineIndex) {
-      startTheater(episodeId).then(() => {
-        setTimeout(() => {
-          window.theater.currentLine = lineIndex;
-          window.theater.renderLine(lineIndex);
-          if (window.theater.isPlaying) window.theater.speakLine(lineIndex);
-        }, 500);
-      });
-    }
-
-
-    async function toggleCharacterReel(episodeId) {
-      const bar = document.getElementById('reel-bar-' + episodeId);
-      const isVisible = bar.style.display !== 'none';
-      document.querySelectorAll('.character-reel-bar').forEach(b => b.style.display = 'none');
-      if (isVisible) return;
-
-      const charContainer = document.getElementById('reel-chars-' + episodeId);
-      if (!charContainer.dataset.loaded) {
-        try {
-          const resp = await fetch('../stories/en.json');
-          const story = await resp.json();
-          const episode = story.episodes.find(e => e.id === episodeId);
-          if (episode && episode.cast) {
-            charContainer.innerHTML = episode.cast.map(c => {
-              const count = episode.script.filter(l => l.speaker === c.name).length;
-              return `<button class="reel-char-btn" onclick="startCharacterReel('${episodeId}', '${c.name}')">${c.emoji} ${c.name} (${count})</button>`;
-            }).join('');
-            charContainer.dataset.loaded = 'true';
-          }
-        } catch (e) { charContainer.innerHTML = '<em>Could not load</em>'; }
-      }
-      bar.style.display = 'block';
-    }
-
-    async function startCharacterReel(episodeId, characterName) {
-      if (!window.speechSynthesis) { alert('Your browser does not support Theater Mode.'); return; }
-      await ChandamamaTheater.openEpisode('../stories/en.json', episodeId, { characterReel: characterName });
-    }
-
-    renderEpisodes();
+    // Set default language for this page
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.app) app.setLanguage('{{LANG}}');
+    });
   </script>
 </body>
 </html>
