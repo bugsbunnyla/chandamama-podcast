@@ -1,3 +1,4 @@
+// Chandamama v3 - Fixed: PDFStoryExtractor, Theater, Translation
 /* ============================================================
    Chandamama Podcast Theater — Fixed v2.2
    Fixes: partial translation (was filtering long sentences),
