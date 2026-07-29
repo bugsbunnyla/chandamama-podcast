@@ -175,7 +175,7 @@ class GoogleTranslateFreeProvider {
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 800;
+    this.minDelay = 600;
     this.lastRequestAt = 0;
     this.maxRetries = 3;
   }
@@ -186,10 +186,12 @@ class GoogleTranslateFreeProvider {
     const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
     const q = encodeURIComponent(text.substring(0, 1800));
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${targetLang}&dt=t&q=${q}`;
+
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       const elapsed = Date.now() - this.lastRequestAt;
-      const wait = this.minDelay * (attempt + 1) + Math.random() * 400;
+      const wait = this.minDelay * (attempt + 1) + Math.random() * 300;
       if (elapsed < wait) await sleep(wait - elapsed);
+
       try {
         this.lastRequestAt = Date.now();
         const resp = await fetch(url);
@@ -197,7 +199,7 @@ class GoogleTranslateFreeProvider {
         const data = await resp.json();
         if (!data || !Array.isArray(data[0]) || data[0].length === 0) throw new Error('Empty response');
         const result = data[0].map(item => item[0]).join('');
-        if (!result || result === text) throw new Error('Same text returned');
+        if (!result || result.trim() === text.trim()) throw new Error('Same text returned');
         this.failures = 0;
         return result;
       } catch (e) {
@@ -218,7 +220,7 @@ class LingvaProvider {
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 1000;
+    this.minDelay = 800;
     this.lastRequestAt = 0;
     this.maxRetries = 2;
   }
@@ -229,17 +231,19 @@ class LingvaProvider {
     const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
     const q = encodeURIComponent(text.substring(0, 1200));
     const url = `https://lingva.ml/api/v1/${sl}/${targetLang}/${q}`;
+
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       const elapsed = Date.now() - this.lastRequestAt;
       const wait = this.minDelay * (attempt + 1) + Math.random() * 300;
       if (elapsed < wait) await sleep(wait - elapsed);
+
       try {
         this.lastRequestAt = Date.now();
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         if (!data || !data.translation) throw new Error('Empty response');
-        if (data.translation === text) throw new Error('Same text returned');
+        if (data.translation.trim() === text.trim()) throw new Error('Same text returned');
         this.failures = 0;
         return data.translation;
       } catch (e) {
@@ -260,7 +264,7 @@ class MyMemoryProvider {
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 12000;
+    this.minDelay = 10000;
     this.lastRequestAt = 0;
     this.email = 'user@example.com';
   }
@@ -270,6 +274,7 @@ class MyMemoryProvider {
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
     if (elapsed < this.minDelay) await sleep(this.minDelay - elapsed);
+
     const sl = sourceLang === 'Autodetect' ? 'Autodetect' : sourceLang;
     const q = encodeURIComponent(text.substring(0, 300));
     const url = `https://api.mymemory.translated.net/get?q=${q}&langpair=${sl}|${targetLang}&de=${encodeURIComponent(this.email)}`;
@@ -280,7 +285,7 @@ class MyMemoryProvider {
       const data = await resp.json();
       if (data.responseData?.translatedText) {
         const t = data.responseData.translatedText;
-        if (t && t !== text) { this.failures = 0; return t; }
+        if (t && t.trim() !== text.trim()) { this.failures = 0; return t; }
         throw new Error('Same text returned');
       }
       throw new Error(data.responseDetails || 'Empty');
@@ -306,7 +311,7 @@ class LibreTranslateProvider {
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 6000;
+    this.minDelay = 5000;
     this.lastRequestAt = 0;
   }
   get baseUrl() { return this.mirrors[this.mirrorIndex]; }
@@ -316,6 +321,7 @@ class LibreTranslateProvider {
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
     if (elapsed < this.minDelay) await sleep(this.minDelay - elapsed + Math.random() * 1000);
+
     const url = `${this.baseUrl}/translate`;
     const body = { q: text.substring(0, 800), source: sourceLang === 'Autodetect' ? 'auto' : sourceLang, target: targetLang, format: 'text' };
     try {
@@ -329,7 +335,7 @@ class LibreTranslateProvider {
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
-      if (!data.translatedText || data.translatedText === text) throw new Error('Same text returned');
+      if (!data.translatedText || data.translatedText.trim() === text.trim()) throw new Error('Same text returned');
       this.failures = 0;
       return data.translatedText;
     } catch (e) {
@@ -456,10 +462,22 @@ class TranslationManager {
     }));
   }
 
-  async translate(text, targetLang = 'te', sourceLang = 'Autodetect') {
-    if (!text || !text.trim()) return '';
+  // CRITICAL FIX: Check if cached value is actually a translation (not original text)
+  isValidCache(text, sourceLang, targetLang) {
     const cached = this.cache.get(text, sourceLang, targetLang);
-    if (cached !== null) { this.stats.cached++; return cached; }
+    if (cached === null) return false;
+    if (cached.trim() === text.trim()) return false; // Cached original text = poisoned cache
+    return true;
+  }
+
+  async translate(text, targetLang = 'te', sourceLang = 'Autodetect', force = false) {
+    if (!text || !text.trim()) return '';
+
+    // CRITICAL FIX: Don't use poisoned cache entries
+    if (!force && this.isValidCache(text, sourceLang, targetLang)) {
+      this.stats.cached++;
+      return this.cache.get(text, sourceLang, targetLang);
+    }
 
     const clean = TextSanitizer.cleanPDFText(text);
     const chunks = TextSanitizer.chunkForTranslation(clean, 400);
@@ -467,14 +485,19 @@ class TranslationManager {
 
     for (const chunk of chunks) {
       if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
-      const cc = this.cache.get(chunk, sourceLang, targetLang);
-      if (cc !== null) { this.stats.cached++; results.push(cc); continue; }
+
+      // Check cache for chunk too
+      if (!force && this.isValidCache(chunk, sourceLang, targetLang)) {
+        this.stats.cached++;
+        results.push(this.cache.get(chunk, sourceLang, targetLang));
+        continue;
+      }
 
       let translated = null, lastError = null;
       for (const provider of this.activeProviders) {
         try {
           translated = await provider.translate(chunk, targetLang, sourceLang);
-          if (translated && translated !== chunk) {
+          if (translated && translated.trim() !== chunk.trim()) {
             this.stats.translated++;
             break;
           }
@@ -485,34 +508,42 @@ class TranslationManager {
         }
       }
 
-      if (translated === null || translated === chunk) {
+      if (translated === null || translated.trim() === chunk.trim()) {
         console.warn('[Translate] All providers failed. Using original. Last error:', lastError);
         this.stats.failed++;
         translated = chunk;
+        // CRITICAL FIX: Do NOT cache failed translations
+        results.push(translated);
+        continue;
       }
+
+      // Only cache successful translations
       this.cache.set(chunk, sourceLang, targetLang, translated);
       results.push(translated);
     }
 
     const result = results.join(' ');
-    this.cache.set(text, sourceLang, targetLang, result);
+    // Only cache full text if it's different from original
+    if (result.trim() !== clean.trim()) {
+      this.cache.set(text, sourceLang, targetLang, result);
+    }
     return result;
   }
 
-  async translateBatch(lines, targetLang = 'te', sourceLang = 'Autodetect', onProgress = null) {
+  async translateBatch(lines, targetLang = 'te', sourceLang = 'Autodetect', onProgress = null, force = false) {
     const results = [];
     let cachedCount = 0;
     for (const line of lines) {
-      if (this.cache.get(line, sourceLang, targetLang) !== null) cachedCount++;
+      if (this.isValidCache(line, sourceLang, targetLang)) cachedCount++;
     }
     const networkTotal = lines.length - cachedCount;
     let networkDone = 0;
 
     for (let i = 0; i < lines.length; i++) {
       if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
-      const r = await this.translate(lines[i], targetLang, sourceLang);
+      const r = await this.translate(lines[i], targetLang, sourceLang, force);
       results.push(r);
-      const wasCached = this.cache.get(lines[i], sourceLang, targetLang) === r && cachedCount > 0;
+      const wasCached = this.isValidCache(lines[i], sourceLang, targetLang);
       if (!wasCached) networkDone++;
       if (onProgress) onProgress(i + 1, lines.length, networkDone, networkTotal);
     }
@@ -1139,6 +1170,21 @@ class ChandamamaApp {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  clearTranslationCache() {
+    Translator.clearCache();
+    const status = document.getElementById('pdfStatus');
+    if (status) status.innerHTML = '<span style="color:#4ade80;">🗑 Translation cache cleared!</span>';
+    // Clear translated flags from all stories
+    if (this.stories) {
+      this.stories.forEach(s => {
+        if (s.lines) s.lines.forEach(l => { l.translated = null; });
+      });
+    }
+    if (this.currentStory && this.currentStory.lines) {
+      this.currentStory.lines.forEach(l => { l.translated = null; });
+    }
   }
 
   downloadScript() {
