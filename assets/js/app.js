@@ -165,57 +165,82 @@ class TranslationCache {
 }
 
 // ======================= TRANSLATION PROVIDERS =======================
-class LibreTranslateProvider {
+
+/*
+  ROBUST TRANSLATION PIPELINE
+  Priority: Google (free, CORS) → Lingva (proxy) → MyMemory → LibreTranslate → User keys
+  Each provider has circuit-breaker protection and exponential backoff.
+*/
+
+class GoogleTranslateFreeProvider {
   constructor() {
-    this.name = 'LibreTranslate';
-    this.mirrors = [
-      'https://libretranslate.de',
-      'https://translate.argosopentech.com',
-      'https://libretranslate.pussthecat.org',
-      'https://lt.vern.cc'
-    ];
-    this.mirrorIndex = 0;
+    this.name = 'GoogleTranslateFree';
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 5000;
+    this.minDelay = 400;
     this.lastRequestAt = 0;
   }
-  get baseUrl() { return this.mirrors[this.mirrorIndex]; }
+
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 500);
-    const url = `${this.baseUrl}/translate`;
-    const body = {
-      q: text.substring(0, 1000),
-      source: sourceLang === 'Autodetect' ? 'auto' : sourceLang,
-      target: targetLang,
-      format: 'text'
-    };
+    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 200);
+
+    const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text.substring(0, 2000))}`;
+
     try {
       this.lastRequestAt = Date.now();
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (resp.status === 429) { this.failures++; this.rotateMirror(); throw new Error('429'); }
+      const resp = await fetch(url);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
-      this.failures = 0;
-      return data.translatedText;
+      if (data && Array.isArray(data[0]) && data[0].length > 0) {
+        this.failures = 0;
+        return data[0].map(item => item[0]).join('');
+      }
+      throw new Error('Empty response');
     } catch (e) {
       this.failures++;
-      if (this.failures >= 5) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 5 * 60 * 1000; }
+      if (this.failures >= 8) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 3 * 60 * 1000; }
       throw e;
     }
   }
-  rotateMirror() {
-    this.mirrorIndex = (this.mirrorIndex + 1) % this.mirrors.length;
-    this.failures = Math.max(0, this.failures - 2);
-    console.log(`[LibreTranslate] Rotated to: ${this.baseUrl}`);
+  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+}
+
+class LingvaProvider {
+  constructor() {
+    this.name = 'Lingva';
+    this.failures = 0;
+    this.circuitOpen = false;
+    this.circuitResetAt = 0;
+    this.minDelay = 800;
+    this.lastRequestAt = 0;
+  }
+
+  async translate(text, targetLang, sourceLang) {
+    if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
+    this.circuitOpen = false;
+    const elapsed = Date.now() - this.lastRequestAt;
+    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 300);
+
+    const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
+    const url = `https://lingva.ml/api/v1/${sl}/${targetLang}/${encodeURIComponent(text.substring(0, 1500))}`;
+
+    try {
+      this.lastRequestAt = Date.now();
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      if (data && data.translation) { this.failures = 0; return data.translation; }
+      throw new Error('Empty response');
+    } catch (e) {
+      this.failures++;
+      if (this.failures >= 5) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 4 * 60 * 1000; }
+      throw e;
+    }
   }
   sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
@@ -226,16 +251,19 @@ class MyMemoryProvider {
     this.failures = 0;
     this.circuitOpen = false;
     this.circuitResetAt = 0;
-    this.minDelay = 10000;
+    this.minDelay = 12000;
     this.lastRequestAt = 0;
+    this.email = 'user@example.com';
   }
+
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
     if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed);
+
     const sl = sourceLang === 'Autodetect' ? 'Autodetect' : sourceLang;
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 350))}&langpair=${sl}|${targetLang}`;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 300))}&langpair=${sl}|${targetLang}&de=${encodeURIComponent(this.email)}`;
     try {
       this.lastRequestAt = Date.now();
       const resp = await fetch(url);
@@ -252,6 +280,69 @@ class MyMemoryProvider {
   sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
 
+class LibreTranslateProvider {
+  constructor() {
+    this.name = 'LibreTranslate';
+    this.mirrors = [
+      'https://libretranslate.de',
+      'https://translate.argosopentech.com',
+      'https://libretranslate.pussthecat.org',
+      'https://lt.vern.cc',
+      'https://libretranslate.eownerdead.dedyn.io'
+    ];
+    this.mirrorIndex = 0;
+    this.failures = 0;
+    this.circuitOpen = false;
+    this.circuitResetAt = 0;
+    this.minDelay = 6000;
+    this.lastRequestAt = 0;
+  }
+  get baseUrl() { return this.mirrors[this.mirrorIndex]; }
+
+  async translate(text, targetLang, sourceLang) {
+    if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
+    this.circuitOpen = false;
+    const elapsed = Date.now() - this.lastRequestAt;
+    if (elapsed < this.minDelay) await this.sleep(this.minDelay - elapsed + Math.random() * 1000);
+
+    const url = `${this.baseUrl}/translate`;
+    const body = {
+      q: text.substring(0, 800),
+      source: sourceLang === 'Autodetect' ? 'auto' : sourceLang,
+      target: targetLang,
+      format: 'text'
+    };
+    try {
+      this.lastRequestAt = Date.now();
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (resp.status === 429) { this.failures++; this.rotateMirror(); throw new Error('429'); }
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      this.failures = 0;
+      return data.translatedText;
+    } catch (e) {
+      this.failures++;
+      if (this.failures >= 5) { this.circuitOpen = true; this.circuitResetAt = Date.now() + 5 * 60 * 1000; }
+      throw e;
+    }
+  }
+
+  rotateMirror() {
+    this.mirrorIndex = (this.mirrorIndex + 1) % this.mirrors.length;
+    this.failures = Math.max(0, this.failures - 2);
+    console.log(`[LibreTranslate] Rotated to: ${this.baseUrl}`);
+  }
+  sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+}
+
 class UserKeyProvider {
   constructor(type) {
     this.type = type;
@@ -262,6 +353,7 @@ class UserKeyProvider {
   }
   getKey() { try { return localStorage.getItem(`cm_api_key_${this.type}`) || ''; } catch(e) { return ''; } }
   hasKey() { return !!this.getKey(); }
+
   async translate(text, targetLang, sourceLang) {
     const key = this.getKey();
     if (!key) throw new Error('No API key');
@@ -273,6 +365,7 @@ class UserKeyProvider {
     if (this.type === 'azure') return this.translateAzure(text, targetLang, sourceLang, key);
     throw new Error('Unknown provider');
   }
+
   async translateGoogle(text, targetLang, sourceLang, key) {
     const url = `https://translation.googleapis.com/language/translate/v2?key=${key}`;
     const body = { q: text, target: targetLang, format: 'text' };
@@ -282,6 +375,7 @@ class UserKeyProvider {
     const data = await resp.json();
     return data.data.translations[0].translatedText;
   }
+
   async translateDeepL(text, targetLang, sourceLang, key) {
     const isFree = key.endsWith(':fx');
     const url = isFree ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
@@ -290,12 +384,13 @@ class UserKeyProvider {
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Authorization': `DeepL-Auth-Key ${key}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body
+      body
     });
     if (!resp.ok) throw new Error(`DeepL HTTP ${resp.status}`);
     const data = await resp.json();
     return data.translations[0].text;
   }
+
   async translateAzure(text, targetLang, sourceLang, key) {
     const region = localStorage.getItem('cm_api_key_azure_region') || 'global';
     let url = `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${targetLang}`;
@@ -313,37 +408,36 @@ class UserKeyProvider {
     const data = await resp.json();
     return data[0].translations[0].text;
   }
+
   sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 }
 
-// ======================= TRANSLATION ENGINE (Redesigned for 1M+ words) =======================
-class TranslationEngine {
+// ======================= TRANSLATION MANAGER =======================
+
+class TranslationManager {
   constructor() {
     this.cache = new TranslationCache();
     this.stats = { translated: 0, cached: 0, failed: 0 };
     this.providers = [
-      new LibreTranslateProvider(),
+      new GoogleTranslateFreeProvider(),
+      new LingvaProvider(),
       new MyMemoryProvider(),
+      new LibreTranslateProvider(),
       new UserKeyProvider('google'),
       new UserKeyProvider('deepl'),
       new UserKeyProvider('azure')
     ];
     this.abortController = new AbortController();
   }
+
   get activeProviders() {
     return this.providers.filter(p => {
       if (p instanceof UserKeyProvider) return p.hasKey();
-      return true;
+      return !(p.circuitOpen && Date.now() < p.circuitResetAt);
     });
   }
-  get bestProvider() {
-    const active = this.activeProviders;
-    const userKeys = active.filter(p => p instanceof UserKeyProvider);
-    if (userKeys.length) return userKeys[0];
-    const free = active.filter(p => !(p instanceof UserKeyProvider) && !p.circuitOpen);
-    return free[0] || active[0];
-  }
-  get providerStatus() {
+
+  getStatus() {
     return this.providers.map(p => ({
       name: p.name,
       available: p instanceof UserKeyProvider ? p.hasKey() : !p.circuitOpen,
@@ -351,20 +445,23 @@ class TranslationEngine {
       failures: p.failures || 0
     }));
   }
+
   async translate(text, targetLang = 'te', sourceLang = 'Autodetect') {
     if (!text || !text.trim()) return '';
     const cached = this.cache.get(text, sourceLang, targetLang);
     if (cached !== null) { this.stats.cached++; return cached; }
+
     const clean = TextSanitizer.cleanPDFText(text);
     const chunks = TextSanitizer.chunkForTranslation(clean, 400);
     const results = [];
+
     for (const chunk of chunks) {
       if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
       const cc = this.cache.get(chunk, sourceLang, targetLang);
       if (cc !== null) { this.stats.cached++; results.push(cc); continue; }
+
       let translated = null, lastError = null;
       for (const provider of this.activeProviders) {
-        if (provider.circuitOpen && Date.now() < provider.circuitResetAt) continue;
         try {
           translated = await provider.translate(chunk, targetLang, sourceLang);
           this.stats.translated++;
@@ -374,6 +471,7 @@ class TranslationEngine {
           console.warn(`[Translate] ${provider.name} failed:`, e.message);
         }
       }
+
       if (translated === null) {
         console.warn('[Translate] All providers failed. Using original. Last error:', lastError);
         this.stats.failed++;
@@ -382,10 +480,12 @@ class TranslationEngine {
       this.cache.set(chunk, sourceLang, targetLang, translated);
       results.push(translated);
     }
+
     const result = results.join(' ');
     this.cache.set(text, sourceLang, targetLang, result);
     return result;
   }
+
   async translateBatch(lines, targetLang = 'te', sourceLang = 'Autodetect', onProgress = null) {
     const results = [];
     let cachedCount = 0;
@@ -394,6 +494,7 @@ class TranslationEngine {
     }
     const networkTotal = lines.length - cachedCount;
     let networkDone = 0;
+
     for (let i = 0; i < lines.length; i++) {
       if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
       const r = await this.translate(lines[i], targetLang, sourceLang);
@@ -407,432 +508,21 @@ class TranslationEngine {
     }
     return results;
   }
+
   cancel() {
     this.abortController.abort();
     this.abortController = new AbortController();
   }
+
   clearCache() {
     this.cache.clear();
     this.stats = { translated: 0, cached: 0, failed: 0 };
   }
+
   getCacheStats() {
     return { size: this.cache.size(), ...this.stats };
   }
 }
-
-const Translator = new TranslationEngine();
-
-// ======================= VOICE MANAGER (Fixed for Telugu) =======================
-class VoiceManager {
-  constructor() {
-    this.synth = window.speechSynthesis;
-    this.voices = [];
-    this.ready = false;
-    this.loadVoices();
-    if (this.synth.onvoiceschanged !== undefined) {
-      this.synth.onvoiceschanged = () => this.loadVoices();
-    }
-    // Fallback load after 1s
-    setTimeout(() => this.loadVoices(), 1000);
-  }
-
-  loadVoices() {
-    this.voices = this.synth.getVoices() || [];
-    if (this.voices.length) this.ready = true;
-    console.log('[VoiceManager] Loaded', this.voices.length, 'voices');
-  }
-
-  getVoicesForLang(lang) {
-    if (!this.ready) this.loadVoices();
-    const langMap = { te: ['te','hi'], hi: ['hi','te'], sa: ['hi','sa'], ta: ['ta'], kn: ['kn'], ml: ['ml'], bn: ['bn'], en: ['en'] };
-    const codes = langMap[lang] || [lang, 'en'];
-    for (const code of codes) {
-      const found = this.voices.filter(v => v.lang && v.lang.toLowerCase().startsWith(code));
-      if (found.length) return found;
-    }
-    return this.voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
-  }
-
-  hasVoiceForLang(lang) {
-    return this.getVoicesForLang(lang).length > 0;
-  }
-
-  getBestVoice(lang) {
-    const candidates = this.getVoicesForLang(lang);
-    // Prefer non-local, clear voices (Google, Microsoft, Apple)
-    const preferred = candidates.find(v => 
-      /Google|Microsoft|Apple|Premium|Enhanced/i.test(v.name)
-    );
-    return preferred || candidates[0] || null;
-  }
-
-  speak(text, characterInfo, lang = 'te') {
-    if (!this.synth) return null;
-    this.synth.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.pitch = Math.max(0.1, Math.min(2.0, characterInfo.pitch || 1.0));
-    utter.rate = Math.max(0.1, Math.min(2.0, characterInfo.rate || 1.0));
-    utter.volume = 1.0;
-
-    const voice = this.getBestVoice(lang);
-    if (voice) {
-      utter.voice = voice;
-      utter.lang = voice.lang;
-    } else {
-      // Fallback lang code
-      const langCodes = { te: 'te-IN', hi: 'hi-IN', sa: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', en: 'en-US' };
-      utter.lang = langCodes[lang] || 'en-US';
-    }
-    this.synth.speak(utter);
-    return utter;
-  }
-}
-
-// ======================= CHARACTER VOICE MAPPER =======================
-class CharacterVoiceMapper {
-  constructor() {
-    this.map = {};
-    this.voiceManager = new VoiceManager();
-  }
-
-  assign(characterName, type = 'narrator') {
-    const cfg = CONFIG.voices[type] || CONFIG.voices.narrator;
-    this.map[characterName] = { name: characterName, type, ...cfg, emoji: this.emojiForType(type) };
-    return this.map[characterName];
-  }
-
-  emojiForType(type) {
-    const map = { kidBoy:'👦', kidGirl:'👧', adultMale:'👨', adultFemale:'👩', elderMale:'👴', elderFemale:'👵', oldMale:'🧓', oldFemale:'👵', animal:'🐾', narrator:'🌙' };
-    return map[type] || '👤';
-  }
-
-  detectTypeFromName(name) {
-    const n = name.toLowerCase();
-    if (/\b(boy|son|kid|child|bala|balu|రాజు|బాలుడు|बालक|लड़का)\b/.test(n)) return 'kidBoy';
-    if (/\b(girl|daughter|kid|child|bala|రాణి|బాలిక|बालिका|लड़की)\b/.test(n)) return 'kidGirl';
-    if (/\b(old man|grandfather|thatha|తాతయ్య|ముసలి|వృద్ధ|वृद्ध|बुज़ुर्ग)\b/.test(n)) return 'oldMale';
-    if (/\b(old woman|grandmother|paati|నానమ్మ|ముసలి|వృద్ధ|वृद्धा)\b/.test(n)) return 'oldFemale';
-    if (/\b(elder|uncle|mama|గురువు|పెద్ద|गुरु|अंकल)\b/.test(n)) return 'elderMale';
-    if (/\b(elder|aunty|amma|పెద్ద|मासी|आंटी)\b/.test(n)) return 'elderFemale';
-    if (/\b(animal|dog|cat|bird|lion|fox|తోడు|నక్క|సింహం|ఏనుగ|शेर|कुत्ता|बिल्ली|पक्षी|सर्प)\b/.test(n)) return 'animal';
-    if (/\b(queen|princess|wife|mother|sister|అమ్మ|అక్క|భార్య|రాణి|रानी|माँ|बहन|पत्नी)\b/.test(n)) return 'adultFemale';
-    if (/\b(king|prince|husband|father|brother|నాన్న|అన్న|భర్త|రాజు|राजा|पिता|भाई|पति)\b/.test(n)) return 'adultMale';
-    return 'narrator';
-  }
-
-  autoAssign(characters) {
-    characters.forEach(c => this.assign(c, this.detectTypeFromName(c)));
-  }
-
-  speak(text, characterName, lang = 'te') {
-    const info = this.map[characterName] || this.map['Narrator'] || { pitch: 1, rate: 1, emoji: '🌙' };
-    return this.voiceManager.speak(text, info, lang);
-  }
-}
-
-// ======================= THEATER ENGINE (Fixed) =======================
-class TheaterEngine {
-  constructor() {
-    this.script = [];
-    this.currentLine = 0;
-    this.isPlaying = false;
-    this.isPaused = false;
-    this.voiceMapper = new CharacterVoiceMapper();
-    this.synth = window.speechSynthesis;
-    this.utterance = null;
-    this.autoTimer = null;
-    this.lang = 'te';
-    this.overlay = null;
-  }
-
-  createOverlay() {
-    if (document.getElementById('theaterOverlay')) return;
-    const ov = document.createElement('div');
-    ov.id = 'theaterOverlay';
-    ov.className = 'theater-overlay';
-    ov.innerHTML = `
-      <button class="theater-close" onclick="window.theater.exit()" title="Close (Esc)">✕</button>
-      <div class="theater-scene" id="theaterScene">
-        <div class="theater-scene-title" id="sceneTitle"></div>
-        <div class="theater-character" id="theaterCharacter">
-          <span class="theater-emoji" id="charEmoji">🌙</span>
-          <div class="theater-name" id="charName">Narrator</div>
-          <div class="theater-line" id="charLine">Welcome to Chandamama Theater</div>
-        </div>
-        <div class="theater-line-indicator" id="lineIndicator">Line 1 of 1</div>
-        <div class="theater-voice-status" id="voiceStatus" style="font-size:0.75rem;color:rgba(255,200,100,0.7);margin-top:8px;"></div>
-      </div>
-      <div class="theater-controls">
-        <button class="theater-btn" onclick="window.theater.skip(-1)" title="Previous">⏮</button>
-        <button class="theater-btn" onclick="window.theater.rewind()" title="Rewind 3 lines">⏪</button>
-        <button class="theater-btn play" id="theaterPlayBtn" onclick="window.theater.togglePlay()" title="Play/Pause (Space)">▶</button>
-        <button class="theater-btn" onclick="window.theater.forward()" title="Forward 3 lines">⏩</button>
-        <button class="theater-btn" onclick="window.theater.skip(1)" title="Next">⏭</button>
-        <div class="theater-progress-wrap">
-          <span class="theater-time" id="theaterCur">1</span>
-          <input type="range" id="theaterProgress" min="0" max="100" value="0" step="1" oninput="window.theater.seek(this.value)">
-          <span class="theater-time" id="theaterDur">1</span>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(ov);
-    this.overlay = ov;
-    document.addEventListener('keydown', (e) => {
-      if (!this.overlay.classList.contains('active')) return;
-      switch(e.code) {
-        case 'Space': e.preventDefault(); this.togglePlay(); break;
-        case 'ArrowRight': this.skip(1); break;
-        case 'ArrowLeft': this.skip(-1); break;
-        case 'Escape': this.exit(); break;
-      }
-    });
-  }
-
-  loadScript(lines, lang = 'te') {
-    this.script = lines;
-    this.lang = lang;
-    this.currentLine = 0;
-    const chars = [...new Set(lines.map(l => l.speaker))];
-    this.voiceMapper.autoAssign(chars);
-    this.createOverlay();
-    const prog = document.getElementById('theaterProgress');
-    if (prog) prog.max = Math.max(0, lines.length - 1);
-    this.updateDuration();
-
-    // Show voice availability warning
-    const hasVoice = this.voiceMapper.voiceManager.hasVoiceForLang(lang);
-    const statusEl = document.getElementById('voiceStatus');
-    if (statusEl) {
-      if (!hasVoice) {
-        statusEl.innerHTML = '⚠️ No ' + lang.toUpperCase() + ' voice found. Install a ' + lang.toUpperCase() + ' language pack in your OS, or audio will sound like numbers/gibberish.';
-      } else {
-        const v = this.voiceMapper.voiceManager.getBestVoice(lang);
-        statusEl.textContent = '🎙️ Using voice: ' + (v ? v.name : 'default');
-      }
-    }
-  }
-
-  renderLine(idx) {
-    if (!this.script.length || idx < 0 || idx >= this.script.length) return;
-    const line = this.script[idx];
-    const info = this.voiceMapper.map[line.speaker] || { emoji: '👤', label: line.speaker };
-    document.getElementById('charEmoji').textContent = info.emoji;
-    document.getElementById('charName').textContent = line.speaker;
-    document.getElementById('charLine').textContent = line.text;
-    document.getElementById('lineIndicator').textContent = `Line ${idx + 1} of ${this.script.length}`;
-    const prog = document.getElementById('theaterProgress');
-    if (prog) prog.value = idx;
-    this.updateTime();
-  }
-
-  speakLine(idx) {
-    if (!this.script.length) return;
-    this.synth.cancel();
-    const line = this.script[idx];
-    this.utterance = this.voiceMapper.speak(line.text, line.speaker, this.lang);
-    if (this.utterance) {
-      this.utterance.onend = () => {
-        if (this.isPlaying && !this.isPaused) {
-          this.autoTimer = setTimeout(() => this.nextLine(), 800);
-        }
-      };
-      this.utterance.onerror = (e) => {
-        console.warn('[Theater] Speech error:', e.error);
-        if (this.isPlaying && !this.isPaused) {
-          this.autoTimer = setTimeout(() => this.nextLine(), 1200);
-        }
-      };
-    }
-  }
-
-  play() {
-    if (!this.script.length) return;
-    // Warn if text is not in target script
-    const line = this.script[this.currentLine];
-    const isTargetScript = this.lang === 'te' ? /[\u0C00-\u0C7F]/.test(line.text) : true;
-    if (!isTargetScript) {
-      const status = document.getElementById('voiceStatus');
-      if (status) status.innerHTML = '⚠️ Text appears untranslated. Click "Translate" first for proper audio.';
-    }
-    this.isPlaying = true;
-    this.isPaused = false;
-    this.updatePlayBtn();
-    this.renderLine(this.currentLine);
-    setTimeout(() => this.speakLine(this.currentLine), 300);
-  }
-
-  pause() {
-    this.isPaused = true;
-    this.synth.pause();
-    this.updatePlayBtn();
-    if (this.autoTimer) clearTimeout(this.autoTimer);
-  }
-
-  resume() {
-    this.isPaused = false;
-    this.synth.resume();
-    this.updatePlayBtn();
-    if (!this.synth.speaking) this.nextLine();
-  }
-
-  togglePlay() {
-    if (this.isPaused) this.resume();
-    else if (this.isPlaying) this.pause();
-    else this.play();
-  }
-
-  nextLine() {
-    if (this.currentLine < this.script.length - 1) {
-      this.currentLine++;
-      this.renderLine(this.currentLine);
-      this.speakLine(this.currentLine);
-    } else {
-      this.finish();
-    }
-  }
-
-  skip(dir) {
-    const newIdx = this.currentLine + dir;
-    if (newIdx >= 0 && newIdx < this.script.length) {
-      this.currentLine = newIdx;
-      this.renderLine(this.currentLine);
-      if (this.isPlaying && !this.isPaused) this.speakLine(this.currentLine);
-    }
-  }
-  seek(val) {
-    const idx = parseInt(val);
-    if (idx >= 0 && idx < this.script.length) {
-      this.currentLine = idx;
-      this.renderLine(this.currentLine);
-      if (this.isPlaying && !this.isPaused) this.speakLine(this.currentLine);
-    }
-  }
-  rewind() { this.skip(-3); }
-  forward() { this.skip(3); }
-  finish() {
-    this.isPlaying = false;
-    this.updatePlayBtn();
-    document.getElementById('charLine').textContent = '🎭 Episode Complete!';
-    document.getElementById('charLine').style.color = '#F4D03F';
-  }
-  updatePlayBtn() {
-    const btn = document.getElementById('theaterPlayBtn');
-    if (btn) btn.textContent = (this.isPlaying && !this.isPaused) ? '⏸' : '▶';
-  }
-  updateTime() {
-    document.getElementById('theaterCur').textContent = this.currentLine + 1;
-    document.getElementById('theaterDur').textContent = this.script.length;
-  }
-  updateDuration() { this.updateTime(); }
-  open() {
-    this.createOverlay();
-    this.overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  }
-  exit() {
-    this.synth.cancel();
-    this.isPlaying = false;
-    this.isPaused = false;
-    if (this.autoTimer) clearTimeout(this.autoTimer);
-    this.overlay.classList.remove('active');
-    document.body.style.overflow = '';
-  }
-}
-
-window.theater = new TheaterEngine();
-
-// ======================= PODCAST PLAYER =======================
-class PodcastPlayer {
-  constructor() {
-    this.audio = new Audio();
-    this.currentUrl = null;
-    this.isPlaying = false;
-    this.bar = null;
-    this.init();
-  }
-  init() {
-    if (document.querySelector('.podcast-bar')) return;
-    const bar = document.createElement('div');
-    bar.className = 'podcast-bar';
-    bar.innerHTML = `
-      <div class="podcast-art" id="podcastArt">🎧</div>
-      <div class="podcast-info">
-        <div class="podcast-title" id="podcastTitle">Select an episode</div>
-        <div class="podcast-lang" id="podcastLang">—</div>
-      </div>
-      <div class="podcast-controls">
-        <button class="podcast-btn-sm" onclick="window.podcastPlayer.seek(-15)">⏪</button>
-        <button class="podcast-btn-sm play" id="podcastPlayBtn" onclick="window.podcastPlayer.togglePlay()">▶</button>
-        <button class="podcast-btn-sm" onclick="window.podcastPlayer.seek(15)">⏩</button>
-      </div>
-      <div class="podcast-progress">
-        <span class="podcast-time" id="podcastCur">0:00</span>
-        <input type="range" id="podcastProgress" min="0" max="100" value="0" step="0.1">
-        <span class="podcast-time" id="podcastDur">0:00</span>
-      </div>
-      <button class="podcast-btn-sm" onclick="window.podcastPlayer.close()">✕</button>
-    `;
-    document.body.appendChild(bar);
-    this.bar = bar;
-    this.audio.addEventListener('timeupdate', () => this.updateProgress());
-    this.audio.addEventListener('ended', () => this.onEnded());
-    this.audio.addEventListener('loadedmetadata', () => this.updateDuration());
-    document.getElementById('podcastProgress').addEventListener('input', (e) => {
-      if (this.audio.duration) this.audio.currentTime = (e.target.value / 100) * this.audio.duration;
-    });
-  }
-  play(url, title, lang, art = '🎧') {
-    if (this.currentUrl === url && this.audio.src) { this.togglePlay(); return; }
-    this.currentUrl = url;
-    this.audio.src = url;
-    this.audio.play().then(() => {
-      this.isPlaying = true;
-      this.bar.classList.add('active');
-      document.getElementById('podcastArt').textContent = art;
-      document.getElementById('podcastTitle').textContent = title;
-      document.getElementById('podcastLang').textContent = lang || 'Audio';
-      this.updatePlayBtn();
-    }).catch(err => alert('Could not play audio: ' + err.message));
-  }
-  togglePlay() {
-    if (!this.audio.src) return;
-    if (this.isPlaying) { this.audio.pause(); this.isPlaying = false; }
-    else { this.audio.play(); this.isPlaying = true; }
-    this.updatePlayBtn();
-  }
-  updatePlayBtn() {
-    const btn = document.getElementById('podcastPlayBtn');
-    if (btn) btn.textContent = this.isPlaying ? '⏸' : '▶';
-  }
-  seek(seconds) {
-    this.audio.currentTime = Math.max(0, Math.min(this.audio.duration || 0, this.audio.currentTime + seconds));
-  }
-  updateProgress() {
-    if (!this.audio.duration) return;
-    const pct = (this.audio.currentTime / this.audio.duration) * 100;
-    document.getElementById('podcastProgress').value = pct;
-    document.getElementById('podcastCur').textContent = this.formatTime(this.audio.currentTime);
-  }
-  updateDuration() {
-    document.getElementById('podcastDur').textContent = this.formatTime(this.audio.duration);
-  }
-  onEnded() { this.isPlaying = false; this.updatePlayBtn(); }
-  close() {
-    this.audio.pause();
-    this.isPlaying = false;
-    this.bar.classList.remove('active');
-    this.currentUrl = null;
-    this.updatePlayBtn();
-  }
-  formatTime(sec) {
-    if (isNaN(sec)) return '0:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
-}
-
-window.podcastPlayer = new PodcastPlayer();
 
 // ======================= PDF PROCESSOR =======================
 class PDFStoryExtractor {
