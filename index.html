@@ -1,221 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chandamama Moonlight Stories — Free Children's Podcast Theater</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<style>
-:root {
-  --bg: #0f0f23;
-  --card: #1a1a2e;
-  --accent: #7c3aed;
-  --accent2: #a855f7;
-  --success: #22c55e;
-  --warn: #fbbf24;
-  --danger: #ef4444;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: 'Nunito', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-}
-.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
-header {
-  text-align: center;
-  padding: 40px 20px 20px;
-  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
-}
-header h1 { font-size: 2.2rem; margin: 0; color: #fff; }
-header p { color: var(--muted); margin: 8px 0 0; font-size: 1.05rem; }
-.nav-pills {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 20px 0;
-}
-.nav-pills span {
-  padding: 8px 16px;
-  background: rgba(124,58,237,0.15);
-  border: 1px solid rgba(124,58,237,0.3);
-  border-radius: 20px;
-  font-size: 13px;
-  color: var(--accent2);
-}
-section { margin: 32px 0; }
-section h2 { font-size: 1.4rem; margin-bottom: 12px; color: #fff; }
-section h3 { font-size: 1.1rem; margin-bottom: 8px; color: #fff; }
-.lang-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 12px;
-}
-.lang-card {
-  padding: 16px 12px;
-  background: var(--card);
-  border: 2px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.lang-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.lang-card.active { border-color: var(--accent); background: rgba(124,58,237,0.15); }
-.lang-card .flag { font-size: 28px; display: block; margin-bottom: 6px; }
-.lang-card .name { font-weight: 700; font-size: 14px; }
-.lang-card .native { font-size: 12px; color: var(--muted); }
-#pdfDropZone {
-  border: 2px dashed rgba(124,58,237,0.4);
-  border-radius: 12px;
-  padding: 40px 20px;
-  text-align: center;
-  background: rgba(124,58,237,0.05);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-#pdfDropZone.dragover {
-  border-color: var(--accent);
-  background: rgba(124,58,237,0.1);
-}
-#pdfDropZone .icon { font-size: 48px; margin-bottom: 12px; }
-.status-msg {
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin: 12px 0;
-  font-size: 14px;
-  display: none;
-}
-.status-msg.show { display: block; }
-.status-msg.ok { background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
-.status-msg.info { background: rgba(124,58,237,0.1); color: var(--accent2); border: 1px solid rgba(124,58,237,0.2); }
-.status-msg.err { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
-.story-card {
-  padding: 14px;
-  margin: 10px 0;
-  background: var(--card);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.story-card:hover { border-color: var(--accent); }
-.story-card.active { border-color: var(--accent); background: rgba(124,58,237,0.1); }
-.story-card strong { color: #fff; font-size: 15px; }
-.story-card div { color: var(--muted); font-size: 12px; margin-top: 4px; }
-#storyEditor, #castEditor, #translationPanel {
-  display: none;
-  margin-top: 20px;
-  padding: 20px;
-  background: var(--card);
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.06);
-}
-.cast-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  margin: 6px 0;
-  background: rgba(255,255,255,0.03);
-  border-radius: 8px;
-}
-.cast-row .emoji { font-size: 24px; }
-.cast-row select {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-family: inherit;
-}
-.trans-progress-wrap {
-  background: #333;
-  height: 14px;
-  border-radius: 7px;
-  margin: 12px 0;
-  overflow: hidden;
-  border: 1px solid var(--accent);
-}
-.trans-progress-fill {
-  width: 0%;
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  transition: width 0.3s ease;
-}
-.about {
-  padding: 24px;
-  background: var(--card);
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.06);
-  margin-top: 40px;
-}
-.about h3 { margin-top: 0; }
-.about p { color: var(--muted); font-size: 14px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chandamama Moonlight Stories — Free Children's Podcast Theater</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0c29;
+      --bg-alt: #1a1a2e;
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --card-bg: rgba(30, 27, 75, 0.6);
+      --card-border: rgba(124, 58, 237, 0.3);
+      --success: #4ade80;
+      --error: #f87171;
+      --info: #60a5fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(180deg, var(--bg) 0%, #302b63 50%, #24243e 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    header { text-align: center; padding: 40px 20px; }
+    header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; background: linear-gradient(90deg, #c084fc, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    header p { color: var(--text-dim); font-size: 1.1rem; max-width: 600px; margin: 0 auto; }
+    .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+    .badge { background: var(--card-bg); border: 1px solid var(--card-border); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; }
+
+    .section { margin: 32px 0; }
+    .section h2 { font-size: 1.5rem; margin-bottom: 8px; }
+    .section > p { color: var(--text-dim); margin-bottom: 16px; }
+
+    .lang-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+    .lang-card {
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .lang-card:hover { border-color: var(--accent-light); transform: translateY(-2px); }
+    .lang-card.active { border-color: var(--accent); background: rgba(124, 58, 237, 0.2); }
+    .lang-flag { font-size: 1.8rem; margin-bottom: 4px; }
+    .lang-name { font-weight: 700; font-size: 0.9rem; }
+    .lang-native { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+
+    .target-lang { text-align: center; margin-top: 12px; font-weight: 700; color: var(--accent-light); }
+
+    .drop-zone {
+      border: 2px dashed var(--card-border);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      background: var(--card-bg);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(124, 58, 237, 0.1); }
+    .drop-icon { font-size: 3rem; margin-bottom: 12px; }
+    .drop-zone p { margin: 4px 0; }
+    .drop-hint { color: var(--text-dim); font-size: 0.85rem; }
+
+    .status-msg { display: none; padding: 12px 16px; border-radius: 8px; margin-top: 12px; font-size: 0.9rem; }
+    .status-msg.show { display: block; }
+    .status-msg.ok { background: rgba(74, 222, 128, 0.15); border: 1px solid var(--success); color: var(--success); }
+    .status-msg.err { background: rgba(248, 113, 113, 0.15); border: 1px solid var(--error); color: var(--error); }
+    .status-msg.info { background: rgba(96, 165, 250, 0.15); border: 1px solid var(--info); color: var(--info); }
+
+    .story-list { margin-top: 20px; }
+    .story-list h3 { margin-bottom: 12px; }
+    .btn-translate-all { margin-bottom: 12px; padding: 8px 16px; background: var(--accent); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600; }
+    .story-cards { display: flex; flex-direction: column; gap: 10px; }
+    .story-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .story-card:hover { border-color: var(--accent-light); }
+    .story-card.active { border-color: var(--accent); background: rgba(124, 58, 237, 0.15); }
+    .story-info { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .translated-badge { font-size: 0.75rem; background: var(--success); color: #000; padding: 2px 8px; border-radius: 10px; }
+    .story-meta { font-size: 0.8rem; color: var(--text-dim); }
+    .translated-note { margin-top: 12px; color: var(--success); font-size: 0.9rem; }
+
+    .editor-panel { margin-top: 20px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; }
+    .editor-panel h3 { margin-bottom: 12px; }
+    .editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .editor-actions button { padding: 8px 16px; border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600; }
+    .btn-translate { background: var(--accent); }
+    .btn-play { background: #059669; }
+    .btn-download { background: #4b5563; }
+    .lines-table { display: flex; flex-direction: column; gap: 6px; max-height: 500px; overflow-y: auto; }
+    .line-row { display: grid; grid-template-columns: 40px 140px 1fr; gap: 8px; align-items: center; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 6px; }
+    .line-row:has(.line-translated) { grid-template-columns: 40px 140px 1fr 1fr; }
+    .line-num { text-align: center; font-size: 0.8rem; color: var(--text-dim); }
+    .line-speaker input, .line-text input { width: 100%; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--card-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.85rem; }
+    .line-translated { font-size: 0.85rem; color: var(--accent-light); font-style: italic; }
+    .more-lines { text-align: center; color: var(--text-dim); padding: 8px; }
+
+    .cast-panel { margin-top: 16px; }
+    .cast-panel h4 { margin-bottom: 10px; }
+    .cast-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .cast-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,0,0,0.2);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+    .cast-emoji { font-size: 1.2rem; }
+    .cast-name { font-weight: 600; font-size: 0.9rem; }
+    .cast-card select { padding: 4px 8px; border-radius: 4px; border: 1px solid var(--card-border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.8rem; }
+
+    .trans-results { margin-top: 12px; }
+    .trans-results h4 { color: var(--success); margin-bottom: 8px; }
+    .preview-lines { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+    .preview-line { background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; }
+    .preview-line strong { color: var(--accent-light); }
+    .preview-line p { margin-top: 2px; font-size: 0.9rem; }
+    .trans-error { color: var(--error); }
+    .trans-meta { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+
+    .about { margin-top: 40px; padding: 24px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--card-border); }
+    .about h3 { margin-bottom: 10px; }
+    .about p { color: var(--text-dim); margin-bottom: 8px; }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.8rem; }
+      .line-row { grid-template-columns: 30px 100px 1fr !important; }
+      .line-translated { display: none; }
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>🌙 Chandamama Moonlight Stories</h1>
-    <p>Moonlight Stories for Little Travelers</p>
-    <p style="font-size:0.95rem;color:var(--muted);">Ancient Sanskrit tales, retold with drama character voices in 8 languages — completely free, forever. Upload a PDF, pick a story, assign voices, and listen.</p>
-    <div class="nav-pills">
-      <span>🎭 Theater</span>
-      <span>📖 Storybook</span>
-      <span>🎧 Podcast</span>
-      <span>📄 PDF Import</span>
-      <span>🌐 8 Languages</span>
-    </div>
-  </header>
-
-  <section>
-    <h2>Choose Your Language</h2>
-    <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">Select the language for translation and voice output.</p>
-    <div id="langGrid" class="lang-grid"></div>
-    <div id="currentLangLabel" style="margin-top:12px;font-weight:700;color:var(--accent2);">Target: TE</div>
-  </section>
-
-  <section>
-    <h2>📄 Import from PDF</h2>
-    <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">Upload a Chandamama PDF. We'll extract pages, detect stories/episodes, and let you dramatize them with character voices.</p>
-    <div id="pdfDropZone">
-      <div class="icon">📚</div>
-      <div style="font-weight:700;">Drop PDF here or click to browse</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:6px;">Supports storybooks, comics, and scanned tales</div>
-      <input type="file" id="pdfInput" accept="application/pdf" style="display:none;">
-    </div>
-    <div id="pdfStatus" class="status-msg"></div>
-  </section>
-
-  <section>
-    <div id="storySelector" style="display:none;"></div>
-    <div id="storyEditor"></div>
-    <div id="castEditor"></div>
-    <div id="translationPanel">
-      <h3>🌐 Translation Progress</h3>
-      <div class="trans-progress-wrap">
-        <div id="transProgress" class="trans-progress-fill"></div>
+  <div class="container">
+    <header>
+      <h1>🌙 Chandamama Moonlight Stories</h1><p style="color:#7c3aed;font-size:0.8rem;margin-top:4px;">✅ Fixed v3.2 — Local Build</p>
+      <p>Ancient Sanskrit tales, retold with drama character voices in 8 languages — completely free, forever. Upload a PDF, pick a story, assign voices, and listen.</p>
+      <div class="badges">
+        <span class="badge">🎭 Theater</span>
+        <span class="badge">📖 Storybook</span>
+        <span class="badge">🎧 Podcast</span>
+        <span class="badge">📄 PDF Import</span>
+        <span class="badge">🌐 8 Languages</span>
       </div>
-      <div id="translatedText" style="font-size:13px;color:var(--muted);min-height:40px;"></div>
-    </div>
-  </section>
+    </header>
 
-  <section class="about">
-    <h3>About Chandamama</h3>
-    <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
-    <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
-    <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
-  </section>
-</div>
+    <section class="section">
+      <h2>Choose Your Language</h2>
+      <p>Select the language for translation and voice output.</p>
+      <div id="langGrid" class="lang-grid"></div>
+      <div id="currentLangLabel" class="target-lang">Target: TE</div>
+    </section>
 
-<script src="assets/js/pdf-processor.js"></script>
-<script src="assets/js/app.js"></script>
+    <section class="section">
+      <h2>📄 Import from PDF</h2>
+      <p>Upload a Chandamama PDF. We'll extract pages, detect stories/episodes, and let you dramatize them with character voices.</p>
+      <div id="pdfDropZone" class="drop-zone">
+        <input type="file" id="pdfInput" accept="application/pdf" style="display:none">
+        <div class="drop-icon">📚</div>
+        <p><strong>Drop PDF here or click to browse</strong></p>
+        <p class="drop-hint">Supports storybooks, comics, and scanned tales</p>
+      </div>
+      <div id="pdfStatus" class="status-msg"></div>
+    </section>
+
+    <section class="section">
+      <div id="storySelector" style="display:none;"></div>
+      <div id="storyEditor" style="display:none;"></div>
+      <div id="castEditor" style="display:none;"></div>
+      <div id="translationPanel" style="display:none;">
+        <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:20px;margin-top:16px;">
+          <h4>🌐 Translation Progress</h4>
+          <div style="width:100%;height:8px;background:#333;border-radius:4px;margin:12px 0;overflow:hidden;">
+            <div id="transProgress" style="width:0%;height:100%;background:var(--accent);transition:width 0.3s;"></div>
+          </div>
+          <div id="translatedText" style="font-size:0.9rem;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="about">
+      <h3>About Chandamama</h3>
+      <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
+      <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
+      <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
+    </section>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="assets/js/pdf-processor.js?v=3.2"></script>
+  <script src="assets/js/app.js?v=3.2"></script>
 </body>
 </html>

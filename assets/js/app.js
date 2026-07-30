@@ -1,12 +1,15 @@
-// Chandamama v3.1 - Fixed: Progress bars, Translate-All, Telugu Audio, PDF Integration
+// CHANDAMAMA FIXED v3.2 - Syntax errors corrected
+// Load this file locally, NOT from GitHub
+console.log('[Chandamama] Fixed v3.2 app.js loaded');
+// Chandamama v3.2 - Fixed: Syntax errors, Language selection, PDF upload
 /* ============================================================
-   Chandamama Podcast Theater - Fixed v3.1
-   ============================================================ */
+ Chandamama Podcast Theater - Fixed v3.2
+ ============================================================ */
 
 const CONFIG = {
   translateApi: 'https://api.mymemory.translated.net/get',
   translateDelay: 1200,
-  translateCacheKey: 'cm_translate_cache_v31',
+  translateCacheKey: 'cm_translate_cache_v32',
   maxRetries: 3,
   maxChunkLength: 350,
   maxLineLength: 2000,
@@ -33,7 +36,7 @@ class TextSanitizer {
     t = t.replace(/\b\d{5,}\s*[\-\/]\s*\d{5,}\b/g, ' ');
     t = t.replace(/\bRs\.?\s*\d+[\.,]?\d*\b/gi, ' ');
     t = t.replace(/\b\d+\s*(?:€|\$|£|¥)\b/g, ' ');
-    t = t.replace(/[#@^*~+=|\\{}[\]_<>]{2,}/g, ' ');
+    t = t.replace(/[#@^*~+=|\{}[\]_<>]{2,}/g, ' ');
     t = t.replace(/\b\d{4,}\b/g, ' ');
     const lines = t.split(/\n+/);
     const cleanLines = lines.filter(line => {
@@ -90,8 +93,8 @@ class TextSanitizer {
 // ======================= TRANSLATION CACHE =======================
 class TranslationCache {
   constructor(maxSize = 5000, maxAgeDays = 30) {
-    this.key = 'cm_translate_cache_v31';
-    this.metaKey = 'cm_translate_cache_meta_v31';
+    this.key = 'cm_translate_cache_v32';
+    this.metaKey = 'cm_translate_cache_meta_v32';
     this.maxSize = maxSize;
     this.maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
     this.data = this.load();
@@ -660,14 +663,16 @@ class Theater {
       document.body.appendChild(overlay);
     }
     overlay.style.display = 'flex';
-    overlay.innerHTML = '<button onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';" style="position:absolute;top:20px;right:20px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">✕</button>' +
-      '<div style="text-align:center;max-width:800px;padding:20px;">' +
-      '<div style="font-size:14px;text-transform:uppercase;letter-spacing:2px;color:#a855f7;margin-bottom:8px;">🎭 Chandamama Theater — ' + langName + '</div>' +
-      '<div id="theaterEmoji" style="font-size:80px;margin:20px 0;transition:all 0.5s;">🌙</div>' +
-      '<div id="theaterSpeaker" style="font-size:18px;color:#a855f7;margin-bottom:12px;font-weight:600;">Narrator</div>' +
-      '<div id="theaterLine" style="font-size:22px;line-height:1.6;min-height:80px;transition:all 0.4s;"></div>' +
-      (!hasNativeVoice ? '<div style="margin-top:16px;font-size:12px;color:#fbbf24;background:rgba(251,191,36,0.1);padding:8px 16px;border-radius:6px;">⚠️ No ' + langName + ' voice installed. Using fallback voice. For best results, install a ' + langName + ' TTS voice in your OS.</div>' : '') +
-      '</div>';
+    overlay.innerHTML = `
+      <div style="text-align:center;max-width:800px;padding:40px;">
+        <h1 style="font-size:2.5rem;margin-bottom:10px;">🎭 Chandamama Theater — ${langName}</h1>
+        <div id="theaterEmoji" style="font-size:4rem;margin:20px 0;transition:all 0.4s;">🌙</div>
+        <div id="theaterSpeaker" style="font-size:1.2rem;opacity:0.7;margin-bottom:10px;">Narrator</div>
+        <div id="theaterLine" style="font-size:1.6rem;line-height:1.6;min-height:80px;transition:all 0.4s;"></div>
+        ${!hasNativeVoice ? `<p style="color:#fbbf24;margin-top:20px;">⚠️ No ${langName} voice installed. Using fallback voice. For best results, install a ${langName} TTS voice in your OS.</p>` : ''}
+        <button onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';" style="margin-top:30px;padding:12px 24px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:1rem;cursor:pointer;">⏹ Stop</button>
+      </div>
+    `;
 
     for (let i = 0; i < lines.length && this.isPlaying; i++) {
       this.currentIndex = i;
@@ -688,14 +693,14 @@ class Theater {
         const utter = new SpeechSynthesisUtterance(text);
         utter.voice = voice;
         utter.lang = this.lang === 'te' ? 'te-IN' :
-                      this.lang === 'hi' ? 'hi-IN' :
-                      this.lang === 'ta' ? 'ta-IN' :
-                      this.lang === 'kn' ? 'kn-IN' :
-                      this.lang === 'ml' ? 'ml-IN' :
-                      this.lang === 'bn' ? 'bn-IN' :
-                      this.lang === 'sa' ? 'sa-IN' :
-                      this.lang === 'en' ? 'en-US' :
-                      voice.lang;
+          this.lang === 'hi' ? 'hi-IN' :
+          this.lang === 'ta' ? 'ta-IN' :
+          this.lang === 'kn' ? 'kn-IN' :
+          this.lang === 'ml' ? 'ml-IN' :
+          this.lang === 'bn' ? 'bn-IN' :
+          this.lang === 'sa' ? 'sa-IN' :
+          this.lang === 'en' ? 'en-US' :
+          voice.lang;
         utter.rate = 0.85;
         utter.pitch = vm.type === 'child' ? 1.3 : vm.type === 'demon' ? 0.7 : 1.0;
         speechSynthesis.speak(utter);
@@ -747,8 +752,8 @@ class PDFStoryExtractor {
       if (sentences.length === 0) return;
       const first = sentences[0];
       const isTitle = /^\d+[.\)]?\s*[A-Z\u0900-\u097F\u0C00-\u0C7F\u0B80-\u0BFF\u0D00-\u0D7F\u0980-\u09FF]/.test(first) ||
-          /^(Chapter|Story|Katha|కథ|అధ్యాయం|भाग|कथा|अध्याय|கதை|ಪುಟ|കഥ)/i.test(first) ||
-          (first.length < 80 && first.length > 5 && /^[A-Z\u0900-\u097F\u0C00-\u0C7F]/.test(first));
+        /^(Chapter|Story|Katha|కథ|అధ్యాయం|भाग|कथा|अध्याय|கதை|ಪುಟ|കഥ)/i.test(first) ||
+        (first.length < 80 && first.length > 5 && /^[A-Z\u0900-\u097F\u0C00-\u0C7F]/.test(first));
       if (isTitle && current.sentences.length > 2) {
         stories.push(current);
         current = { title: first, pages: [p.pageNum], text: p.text, sentences };
@@ -809,7 +814,24 @@ class ChandamamaApp {
       { code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
       { code: 'sa', name: 'Sanskrit', native: 'संस्कृतम्', flag: '🕉️' }
     ];
-    grid.innerHTML = langs.map(l => '<div class="lang-card" data-lang="' + l.code + '" onclick="app.setLanguage('' + l.code + '')"><span class="flag">' + l.flag + '</span><div class="name">' + l.name + '</div><div class="native">' + l.native + '</div></div>').join('');
+    grid.innerHTML = langs.map(l => `
+      <div class="lang-card" data-lang="${l.code}" role="button" tabindex="0">
+        <div class="lang-flag">${l.flag}</div>
+        <div class="lang-name">${l.name}</div>
+        <div class="lang-native">${l.native}</div>
+      </div>
+    `).join('');
+
+    // FIX: Add click handlers to language cards
+    grid.querySelectorAll('.lang-card').forEach(card => {
+      card.addEventListener('click', () => this.setLanguage(card.dataset.lang));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.setLanguage(card.dataset.lang);
+        }
+      });
+    });
   }
 
   setLanguage(code) {
@@ -848,7 +870,7 @@ class ChandamamaApp {
       this.renderStorySelector();
       const totalLines = this.stories.reduce((a, s) => a + (s.lines?.length || 0), 0);
       if (status) {
-        status.innerHTML = 'Found <strong>' + this.pages.length + '</strong> pages, <strong>' + this.stories.length + '</strong> stories, <strong>' + totalLines + '</strong> drama lines.';
+        status.innerHTML = `Found <strong>${this.pages.length}</strong> pages, <strong>${this.stories.length}</strong> stories, <strong>${totalLines}</strong> drama lines.`;
         status.className = 'status-msg show ok';
       }
     } catch (e) {
@@ -862,28 +884,34 @@ class ChandamamaApp {
     if (!container) return;
     const hasAnyTranslated = this.stories.some(s => s.lines?.some(l => l.translated));
 
-    let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">';
-    html += '<h3 style="margin:0;">📚 Select Story / Episode</h3>';
+    let html = `<div class="story-list">`;
+    html += `<h3>📚 Select Story / Episode</h3>`;
     if (this.stories.length > 1) {
-      html += '<button onclick="app.translateAllStories()" style="padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;font-size:13px;">🌐 Translate All to ' + this.lang.toUpperCase() + '</button>';
+      html += `<button onclick="window.app.translateAllStories()" class="btn-translate-all">🌐 Translate All Stories</button>`;
     }
-    html += '</div>';
+    html += `<div class="story-cards">`;
 
     for (let i = 0; i < this.stories.length; i++) {
       const s = this.stories[i];
       const isTranslated = s.lines?.some(l => l.translated);
-      html += '<div class="story-card" data-index="' + i + '" onclick="app.selectStory(' + i + ')">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-      html += '<strong>' + this.escapeHtml(s.title || 'Story ' + (i+1)) + '</strong>';
-      if (isTranslated) html += '<span style="color:var(--success);font-size:12px;font-weight:600;">✓ Translated</span>';
-      html += '</div>';
-      html += '<div>Pages ' + (s.pages?.[0] || '?') + '–' + (s.pages?.[s.pages.length-1] || '?') + ' · ' + (s.sentences?.length || 0) + ' sentences · ' + (s.lines?.length || 0) + ' drama lines</div>';
-      html += '</div>';
+      html += `
+        <div class="story-card" onclick="window.app.selectStory(${i})" role="button" tabindex="0">
+          <div class="story-info">
+            <strong>${this.escapeHtml(s.title || 'Story ' + (i+1))}</strong>
+            ${isTranslated ? '<span class="translated-badge">✓ Translated</span>' : ''}
+          </div>
+          <div class="story-meta">
+            Pages ${s.pages?.[0] || '?'}–${s.pages?.[s.pages.length-1] || '?'} · ${s.sentences?.length || 0} sentences · ${s.lines?.length || 0} drama lines
+          </div>
+        </div>
+      `;
     }
+    html += `</div>`;
 
     if (hasAnyTranslated) {
-      html += '<div style="margin-top:12px;padding:10px;background:rgba(34,197,94,0.1);border-radius:6px;color:var(--success);font-size:13px;text-align:center;">✓ Some stories are translated to ' + this.lang.toUpperCase() + '. Select one and click 🎭 Play Theater to listen.</div>';
+      html += `<p class="translated-note">✓ Some stories are translated to ${this.lang.toUpperCase()}. Select one and click 🎭 Play Theater to listen.</p>`;
     }
+    html += `</div>`;
 
     container.innerHTML = html;
     container.style.display = 'block';
@@ -923,29 +951,35 @@ class ChandamamaApp {
 
     const isTranslated = lines.some(l => l.translated);
 
-    let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">';
-    html += '<h3 style="margin:0;">🎭 Drama Cast & Lines (' + lines.length + ' lines)</h3>';
-    html += '<div>';
-    html += '<button onclick="app.translateStory()" style="padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;font-size:13px;margin-right:8px;">🌐 Translate to ' + this.lang.toUpperCase() + '</button>';
-    html += '<button onclick="app.openTheater()" style="padding:8px 16px;background:var(--success);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;font-size:13px;">🎭 Play Theater</button>';
-    html += '</div></div>';
+    let html = `<div class="editor-panel">`;
+    html += `<h3>🎭 Drama Cast & Lines (${lines.length} lines)</h3>`;
+    html += `<div class="editor-actions">`;
+    html += `<button onclick="window.app.translateStory()" class="btn-translate">🌐 Translate to ${this.lang.toUpperCase()}</button>`;
+    html += `<button onclick="window.app.openTheater()" class="btn-play">🎭 Play Theater</button>`;
+    html += `<button onclick="window.app.downloadScript()" class="btn-download">💾 Download Script</button>`;
+    html += `</div>`;
+    html += `<div class="lines-table">`;
 
     for (let i = 0; i < Math.min(lines.length, 100); i++) {
       const l = lines[i];
-      html += '<div style="display:flex;gap:8px;margin:6px 0;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;align-items:flex-start;">';
-      html += '<span style="color:var(--accent);min-width:28px;font-weight:700;">' + (i+1) + '</span>';
-      html += '<div style="flex:1;">';
-      html += '<div style="font-size:12px;color:var(--accent2);margin-bottom:2px;">' + this.escapeHtml(l.speaker) + '</div>';
-      html += '<div style="color:var(--text);">' + this.escapeHtml(l.text) + '</div>';
-      if (l.translated) {
-        html += '<div style="color:var(--success);font-size:13px;margin-top:4px;border-left:2px solid var(--success);padding-left:8px;">' + this.escapeHtml(l.translated) + '</div>';
-      }
-      html += '</div></div>';
+      html += `
+        <div class="line-row">
+          <div class="line-num">${i+1}</div>
+          <div class="line-speaker">
+            <input type="text" value="${this.escapeHtml(l.speaker)}" onchange="window.app.updateSpeaker(${i}, this.value)">
+          </div>
+          <div class="line-text">
+            <input type="text" value="${this.escapeHtml(l.text)}" onchange="window.app.updateText(${i}, this.value)">
+          </div>
+          ${l.translated ? `<div class="line-translated">${this.escapeHtml(l.translated)}</div>` : ''}
+        </div>
+      `;
     }
 
     if (lines.length > 100) {
-      html += '<div style="text-align:center;color:var(--muted);padding:12px;">... and ' + (lines.length - 100) + ' more lines ...</div>';
+      html += `<div class="more-lines">... and ${lines.length - 100} more lines ...</div>`;
     }
+    html += `</div></div>`;
 
     editor.innerHTML = html;
     editor.style.display = 'block';
@@ -958,18 +992,21 @@ class ChandamamaApp {
     const chars = [...new Set(this.currentStory.lines.map(l => l.speaker))];
     window.theater.voiceMapper.autoAssign(chars);
 
-    let html = '';
+    const voiceTypes = Object.keys(CONFIG.voices);
+    let html = `<div class="cast-panel"><h4>🎭 Cast & Voices</h4><div class="cast-grid">`;
     for (const c of chars) {
       const info = window.theater.voiceMapper.map[c] || { type: 'narrator', emoji: '🌙' };
-      html += '<div class="cast-row">';
-      html += '<span class="emoji">' + info.emoji + '</span>';
-      html += '<span style="flex:1;font-weight:600;">' + this.escapeHtml(c) + '</span>';
-      html += '<select onchange="app.setCharacterType('' + c.replace(/'/g, "\'") + '', this.value)">';
-      for (const [k, v] of Object.entries(CONFIG.voices)) {
-        html += '<option value="' + k + '"' + (info.type === k ? ' selected' : '') + '>' + v.label + '</option>';
-      }
-      html += '</select></div>';
+      html += `
+        <div class="cast-card">
+          <span class="cast-emoji">${info.emoji}</span>
+          <span class="cast-name">${this.escapeHtml(c)}</span>
+          <select onchange="window.app.setCharacterType('${this.escapeHtml(c)}', this.value)">
+            ${voiceTypes.map(vt => `<option value="${vt}" ${vt === info.type ? 'selected' : ''}>${CONFIG.voices[vt].label}</option>`).join('')}
+          </select>
+        </div>
+      `;
     }
+    html += `</div></div>`;
     container.innerHTML = html;
     container.style.display = 'block';
   }
@@ -1008,8 +1045,10 @@ class ChandamamaApp {
         if (fill) fill.style.width = pct + '%';
         if (textDiv) {
           const prov = Translator.bestProvider?.name || '...';
-          textDiv.innerHTML = '<div>Translating line ' + done + '/' + total + ' (' + pct + '%)</div>' +
-            '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Provider: ' + prov + ' | Network: ' + netDone + '/' + netTotal + ' | Cache hits: ' + Translator.stats.cached + '</div>';
+          textDiv.innerHTML = `
+            <p>Translating line ${done}/${total} (${pct}%)</p>
+            <p class="trans-meta">Provider: ${prov} | Network: ${netDone}/${netTotal} | Cache hits: ${Translator.stats.cached}</p>
+          `;
         }
       });
 
@@ -1017,26 +1056,29 @@ class ChandamamaApp {
       const statsAfter = Translator.getCacheStats();
 
       if (textDiv) {
-        let html = '<div style="color:var(--success);font-weight:700;margin-bottom:8px;">✅ Translation complete!</div>';
-        html += '<div style="font-size:12px;color:var(--muted);">Cache: ' + statsAfter.size + ' entries (' + statsAfter.cached + ' hits, ' + statsAfter.translated + ' new, ' + statsAfter.failed + ' fails)</div>';
-        html += '<div style="margin-top:12px;max-height:300px;overflow-y:auto;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;">';
+        let html = `<div class="trans-results">`;
+        html += `<h4>✅ Translation complete!</h4>`;
+        html += `<p>Cache: ${statsAfter.size} entries (${statsAfter.cached} hits, ${statsAfter.translated} new, ${statsAfter.failed} fails)</p>`;
+        html += `<div class="preview-lines">`;
         for (let i = 0; i < Math.min(this.currentStory.lines.length, 30); i++) {
           const l = this.currentStory.lines[i];
-          html += '<div style="margin:6px 0;padding:6px;background:rgba(255,255,255,0.02);border-radius:4px;">';
-          html += '<div style="font-size:11px;color:var(--accent2);">' + this.escapeHtml(l.speaker) + '</div>';
-          html += '<div style="font-size:13px;">' + this.escapeHtml(l.translated || l.text) + '</div>';
-          html += '</div>';
+          html += `
+            <div class="preview-line">
+              <strong>${this.escapeHtml(l.speaker)}</strong>
+              <p>${this.escapeHtml(l.translated || l.text)}</p>
+            </div>
+          `;
         }
         if (this.currentStory.lines.length > 30) {
-          html += '<div style="text-align:center;color:var(--muted);padding:8px;">... ' + (this.currentStory.lines.length - 30) + ' more lines ...</div>';
+          html += `<p>... ${this.currentStory.lines.length - 30} more lines ...</p>`;
         }
-        html += '</div>';
+        html += `</div></div>`;
         textDiv.innerHTML = html;
       }
       this.showStoryEditor();
       this.renderStorySelector();
     } catch (e) {
-      if (textDiv) textDiv.innerHTML = '<div style="color:var(--danger);">❌ Translation stopped: ' + e.message + '</div>';
+      if (textDiv) textDiv.innerHTML = `<p class="trans-error">❌ Translation stopped: ${e.message}</p>`;
     }
     if (fill) fill.style.width = '100%';
   }
@@ -1083,16 +1125,19 @@ class ChandamamaApp {
       document.body.appendChild(overlay);
     }
     overlay.style.display = 'flex';
-    overlay.innerHTML = '<div style="text-align:center;max-width:600px;padding:20px;">' +
-      '<div style="font-size:48px;margin-bottom:16px;">🌐</div>' +
-      '<div style="font-size:20px;font-weight:700;margin-bottom:8px;">Translating All Stories</div>' +
-      '<div style="font-size:14px;color:var(--muted);margin-bottom:20px;">' + this.stories.length + ' stories · ~' + totalLines + ' lines · Target: <strong>' + this.lang.toUpperCase() + '</strong></div>' +
-      '<div style="background:#333;height:20px;border-radius:10px;overflow:hidden;border:2px solid var(--accent);margin-bottom:12px;">' +
-      '<div id="allTransProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 0.3s ease;"></div></div>' +
-      '<div id="allTransPercent" style="font-size:28px;font-weight:800;color:var(--accent2);margin-bottom:8px;">0%</div>' +
-      '<div id="allTransDetail" style="font-size:13px;color:var(--muted);min-height:20px;">Starting...</div>' +
-      '<button onclick="Translator.cancel();" style="margin-top:20px;padding:10px 24px;background:var(--danger);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;">⛔ Cancel</button>' +
-      '</div>';
+    overlay.innerHTML = `
+      <div style="text-align:center;max-width:600px;padding:40px;">
+        <div style="font-size:4rem;margin-bottom:20px;">🌐</div>
+        <h2>Translating All Stories</h2>
+        <p>${this.stories.length} stories · ~${totalLines} lines · Target: <strong>${this.lang.toUpperCase()}</strong></p>
+        <div style="width:100%;height:8px;background:#333;border-radius:4px;margin:20px 0;overflow:hidden;">
+          <div id="allTransProgressBar" style="width:0%;height:100%;background:#7c3aed;transition:width 0.3s;"></div>
+        </div>
+        <div id="allTransPercent" style="font-size:1.5rem;font-weight:bold;">0%</div>
+        <div id="allTransDetail" style="margin-top:10px;opacity:0.7;">Starting...</div>
+        <button onclick="Translator.cancel();" style="margin-top:20px;padding:10px 20px;background:#ef4444;border:none;border-radius:8px;color:#fff;cursor:pointer;">⏹ Cancel</button>
+      </div>
+    `;
 
     Translator.cancel();
     let globalDone = 0;
@@ -1117,7 +1162,7 @@ class ChandamamaApp {
           if (pctEl) pctEl.textContent = pct + '%';
           if (detailEl) {
             const prov = Translator.bestProvider?.name || '...';
-            detailEl.innerHTML = 'Story <strong>' + (i+1) + '/' + this.stories.length + '</strong>: ' + this.escapeHtml(this.currentStory.title || 'Untitled') + ' — line ' + done + '/' + total + ' <br><span style="color:var(--accent2);">' + pct + '% complete</span> · Provider: ' + prov;
+            detailEl.innerHTML = `Story <strong>${i+1}/${this.stories.length}</strong>: ${this.escapeHtml(this.currentStory.title || 'Untitled')} — line ${done}/${total}<br>${pct}% complete · Provider: ${prov}`;
           }
         });
 
@@ -1125,7 +1170,7 @@ class ChandamamaApp {
       } catch (e) {
         failedStories++;
         const detailEl = document.getElementById('allTransDetail');
-        if (detailEl) detailEl.innerHTML = '<span style="color:var(--danger);">⚠ Stopped at story ' + (i+1) + ': ' + e.message + '</span>';
+        if (detailEl) detailEl.innerHTML = `⚠ Stopped at story ${i+1}: ${e.message}`;
         break;
       }
     }
@@ -1133,20 +1178,22 @@ class ChandamamaApp {
     const stats = Translator.getCacheStats();
     const overlayEl = document.getElementById('allTransOverlay');
     if (overlayEl) {
-      overlayEl.innerHTML = '<div style="text-align:center;max-width:600px;padding:20px;">' +
-        '<div style="font-size:48px;margin-bottom:16px;">' + (failedStories > 0 ? '⚠️' : '✅') + '</div>' +
-        '<div style="font-size:20px;font-weight:700;margin-bottom:8px;">' + (failedStories > 0 ? 'Translation Partially Complete' : 'All Stories Translated!') + '</div>' +
-        '<div style="font-size:14px;color:var(--muted);margin-bottom:20px;">' +
-        (this.stories.length - failedStories) + '/' + this.stories.length + ' stories completed · ' + stats.size + ' cache entries<br>' +
-        stats.cached + ' cached · ' + stats.translated + ' new · ' + stats.failed + ' failed' +
-        '</div>' +
-        '<button onclick="document.getElementById('allTransOverlay').style.display='none';" style="padding:10px 24px;background:var(--success);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;">Close</button>' +
-        '</div>';
+      overlayEl.innerHTML = `
+        <div style="text-align:center;max-width:600px;padding:40px;">
+          <div style="font-size:4rem;margin-bottom:20px;">${failedStories > 0 ? '⚠️' : '✅'}</div>
+          <h2>${failedStories > 0 ? 'Translation Partially Complete' : 'All Stories Translated!'}</h2>
+          <p>${this.stories.length - failedStories}/${this.stories.length} stories completed · ${stats.size} cache entries</p>
+          <p>${stats.cached} cached · ${stats.translated} new · ${stats.failed} failed</p>
+          <button onclick="document.getElementById('allTransOverlay').style.display='none';" style="margin-top:20px;padding:10px 20px;background:#7c3aed;border:none;border-radius:8px;color:#fff;cursor:pointer;">Close</button>
+        </div>
+      `;
     }
 
     if (status) {
-      status.innerHTML = '<div style="font-weight:700;color:var(--success);">✅ ' + (this.stories.length - failedStories) + '/' + this.stories.length + ' stories translated to ' + this.lang.toUpperCase() + '!</div>' +
-        '<div style="font-size:12px;color:var(--muted);">Cache: ' + stats.size + ' entries (' + stats.cached + ' cached, ' + stats.translated + ' new, ' + stats.failed + ' failed)</div>';
+      status.innerHTML = `
+        <p>✅ ${this.stories.length - failedStories}/${this.stories.length} stories translated to ${this.lang.toUpperCase()}!</p>
+        <p>Cache: ${stats.size} entries (${stats.cached} cached, ${stats.translated} new, ${stats.failed} failed)</p>
+      `;
       status.className = 'status-msg show ok';
     }
     this.renderStorySelector();
@@ -1174,26 +1221,34 @@ class ChandamamaApp {
     const panel = document.createElement('div');
     panel.id = 'cmSettingsPanel';
     panel.style.cssText = 'display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e1b4b;border:1px solid #4c1d95;border-radius:12px;padding:24px;max-width:420px;width:90%;z-index:10000;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.6);font-family:sans-serif;';
-    panel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-      '<h3 style="margin:0;">⚙️ Translation Settings</h3>' +
-      '<button onclick="document.getElementById('cmSettingsPanel').style.display='none';" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button></div>' +
-      '<p style="font-size:12px;color:var(--muted);margin-bottom:16px;">For 1,000+ lines, add a paid API key. Free providers rate-limit heavily.</p>' +
-      '<div style="margin-bottom:12px;">' +
-      '<label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Google Cloud API Key</label>' +
-      '<input id="cmKeyGoogle" type="password" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="AIza..."></div>' +
-      '<div style="margin-bottom:12px;">' +
-      '<label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">DeepL API Key</label>' +
-      '<input id="cmKeyDeepL" type="password" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="xxxxxxxx-xxxx..."></div>' +
-      '<div style="margin-bottom:12px;">' +
-      '<label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Azure Translator Key</label>' +
-      '<input id="cmKeyAzure" type="password" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="xxxxxxxx..."></div>' +
-      '<div style="margin-bottom:16px;">' +
-      '<label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Azure Region (e.g. global, westus2)</label>' +
-      '<input id="cmKeyAzureRegion" type="text" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="global"></div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
-      '<button onclick="app.saveSettings()" style="flex:1;padding:10px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;">Save</button>' +
-      '<button onclick="app.clearCache()" style="padding:10px;background:rgba(239,68,68,0.2);border:1px solid var(--danger);border-radius:6px;color:var(--danger);cursor:pointer;font-weight:600;">Clear Cache</button></div>' +
-      '<div id="cmProviderStatus" style="font-size:12px;"></div>';
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;">⚙️ Translation Settings</h3>
+        <button onclick="document.getElementById('cmSettingsPanel').style.display='none';" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;">✕</button>
+      </div>
+      <div id="cmProviderStatus" style="margin-bottom:16px;font-size:0.85rem;"></div>
+      <p style="font-size:0.85rem;opacity:0.7;margin-bottom:16px;">For 1,000+ lines, add a paid API key. Free providers rate-limit heavily.</p>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:0.85rem;margin-bottom:4px;">Google Cloud API Key</label>
+        <input type="text" id="cmKeyGoogle" placeholder="AIza..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0c29;color:#fff;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:0.85rem;margin-bottom:4px;">DeepL API Key</label>
+        <input type="text" id="cmKeyDeepL" placeholder="xxx-xxx..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0c29;color:#fff;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="display:block;font-size:0.85rem;margin-bottom:4px;">Azure Translator Key</label>
+        <input type="text" id="cmKeyAzure" placeholder="..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0c29;color:#fff;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:0.85rem;margin-bottom:4px;">Azure Region (e.g. global, westus2)</label>
+        <input type="text" id="cmKeyAzureRegion" placeholder="global" style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0c29;color:#fff;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="window.app.saveSettings()" style="flex:1;padding:10px;background:#7c3aed;border:none;border-radius:6px;color:#fff;cursor:pointer;">💾 Save</button>
+        <button onclick="window.app.clearCache()" style="flex:1;padding:10px;background:#374151;border:none;border-radius:6px;color:#fff;cursor:pointer;">🗑 Clear Cache</button>
+      </div>
+    `;
     document.body.appendChild(panel);
     this.loadSettings();
   }
@@ -1215,11 +1270,11 @@ class ChandamamaApp {
     const div = document.getElementById('cmProviderStatus');
     if (!div) return;
     const status = Translator.providerStatus;
-    let html = '<div style="font-weight:600;margin-bottom:6px;">Provider Status</div>';
+    let html = `<h4 style="margin:0 0 8px 0;">Provider Status</h4>`;
     for (const s of status) {
       const color = s.available ? '#4ade80' : '#f87171';
       const note = s.circuitOpen ? ' (circuit open)' : '';
-      html += '<div style="color:' + color + ';margin:2px 0;">● ' + s.name + note + ' — fails: ' + s.failures + '</div>';
+      html += `<p style="margin:4px 0;color:${color};">● ${s.name}${note} — fails: ${s.failures}</p>`;
     }
     div.innerHTML = html;
   }

@@ -1,8 +1,11 @@
+// CHANDAMAMA FIXED v3.2 - Syntax errors corrected
+// Load this file locally, NOT from GitHub
+console.log('[Chandamama] Fixed v3.2 pdf-processor.js loaded');
 /* ============================================
-   Chandamama PDF Auto-Processor
-   Client-side PDF text extraction & dramatization
-   Uses PDF.js to load PDFs directly from any URL
-   ============================================ */
+ Chandamama PDF Auto-Processor
+ Client-side PDF text extraction & dramatization
+ Uses PDF.js to load PDFs directly from any URL
+ ============================================ */
 
 class PDFAutoProcessor {
   constructor() {
@@ -64,10 +67,7 @@ class PDFAutoProcessor {
         const page = await this.pdfDoc.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += '
---- PAGE ' + i + ' ---
-' + pageText + '
-';
+        fullText += '\n--- PAGE ' + i + ' ---\n' + pageText + '\n';
 
         const pct = Math.round((i / this.pdfDoc.numPages) * 100);
         this.updateStatus('🔍 Extracting... ' + pct + '% (' + i + '/' + this.pdfDoc.numPages + ' pages)', 'info');
@@ -86,8 +86,7 @@ class PDFAutoProcessor {
     this.updateStatus('🎭 Parsing text into dramatized script...', 'info');
 
     const text = this.extractedText;
-    const lines = text.split(/
-+/).filter(l => l.trim().length > 10);
+    const lines = text.split(/\n+/).filter(l => l.trim().length > 10);
     const pages = text.split(/--- PAGE \d+ ---/);
     const story = this.heuristicParse(lines, pages);
 
@@ -128,16 +127,16 @@ class PDFAutoProcessor {
           description: 'Auto-detected character from PDF text'
         }))
       : [
-        { name: "Narrator", role: "Storyteller", emoji: "🌙",
-          voice: {pitch: 1.0, rate: 0.85, pref: "male"},
-          description: "Auto-generated narrator" },
-        { name: "Character One", role: "Protagonist", emoji: "🤴",
-          voice: {pitch: 0.8, rate: 0.85, pref: "male"},
-          description: "Auto-generated character" },
-        { name: "Character Two", role: "Companion", emoji: "👸",
-          voice: {pitch: 1.15, rate: 0.9, pref: "female"},
-          description: "Auto-generated character" }
-      ];
+          { name: "Narrator", role: "Storyteller", emoji: "🌙",
+            voice: {pitch: 1.0, rate: 0.85, pref: "male"},
+            description: "Auto-generated narrator" },
+          { name: "Character One", role: "Protagonist", emoji: "🤴",
+            voice: {pitch: 0.8, rate: 0.85, pref: "male"},
+            description: "Auto-generated character" },
+          { name: "Character Two", role: "Companion", emoji: "👸",
+            voice: {pitch: 1.15, rate: 0.9, pref: "female"},
+            description: "Auto-generated character" }
+        ];
 
     const scenes = chunks.map((chunk, i) => ({
       id: 'scene' + (i+1),
