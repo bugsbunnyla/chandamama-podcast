@@ -32,7 +32,7 @@ class PDFAutoProcessor {
       });
 
       this.pdfDoc = await loadingTask.promise;
-      this.updateStatus(`📄 PDF loaded: ${this.pdfDoc.numPages} pages`, 'ok');
+      this.updateStatus('📄 PDF loaded: ' + this.pdfDoc.numPages + ' pages', 'ok');
       return this.pdfDoc;
     } catch (e) {
       console.error('[PDF] Load error:', e);
@@ -64,17 +64,20 @@ class PDFAutoProcessor {
         const page = await this.pdfDoc.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += `\n--- PAGE ${i} ---\n${pageText}\n`;
+        fullText += '
+--- PAGE ' + i + ' ---
+' + pageText + '
+';
 
         const pct = Math.round((i / this.pdfDoc.numPages) * 100);
-        this.updateStatus(`🔍 Extracting... ${pct}% (${i}/${this.pdfDoc.numPages} pages)`, 'info');
+        this.updateStatus('🔍 Extracting... ' + pct + '% (' + i + '/' + this.pdfDoc.numPages + ' pages)', 'info');
       } catch (e) {
-        console.warn(`[PDF] Page ${i} error:`, e);
+        console.warn('[PDF] Page ' + i + ' error:', e);
       }
     }
 
     this.extractedText = fullText;
-    this.updateStatus(`✅ Extracted ${fullText.length.toLocaleString()} characters`, 'ok');
+    this.updateStatus('✅ Extracted ' + fullText.length.toLocaleString() + ' characters', 'ok');
     return fullText;
   }
 
@@ -83,22 +86,23 @@ class PDFAutoProcessor {
     this.updateStatus('🎭 Parsing text into dramatized script...', 'info');
 
     const text = this.extractedText;
-    const lines = text.split(/\n+/).filter(l => l.trim().length > 10);
+    const lines = text.split(/
++/).filter(l => l.trim().length > 10);
     const pages = text.split(/--- PAGE \d+ ---/);
     const story = this.heuristicParse(lines, pages);
 
     this.parsedStory = story;
-    this.updateStatus(`✅ Created ${story.episodes.length} episodes with ${story.episodes.reduce((a,e) => a + e.script.length, 0)} lines`, 'ok');
+    this.updateStatus('✅ Created ' + story.episodes.length + ' episodes with ' + story.episodes.reduce((a,e) => a + e.script.length, 0) + ' lines', 'ok');
     return story;
   }
 
   heuristicParse(lines, pages) {
-    const hasDevanagari = /[\u0900-\u097F]/.test(this.extractedText);
-    const hasTelugu = /[\u0C00-\u0C7F]/.test(this.extractedText);
-    const hasTamil = /[\u0B80-\u0BFF]/.test(this.extractedText);
-    const hasKannada = /[\u0C80-\u0CFF]/.test(this.extractedText);
-    const hasMalayalam = /[\u0D00-\u0D7F]/.test(this.extractedText);
-    const hasBengali = /[\u0980-\u09FF]/.test(this.extractedText);
+    const hasDevanagari = /[ऀ-ॿ]/.test(this.extractedText);
+    const hasTelugu = /[ఀ-౿]/.test(this.extractedText);
+    const hasTamil = /[஀-௿]/.test(this.extractedText);
+    const hasKannada = /[ಀ-೿]/.test(this.extractedText);
+    const hasMalayalam = /[ഀ-ൿ]/.test(this.extractedText);
+    const hasBengali = /[ঀ-৿]/.test(this.extractedText);
 
     let lang = 'English';
     if (hasDevanagari) lang = 'Sanskrit/Hindi';
@@ -114,7 +118,7 @@ class PDFAutoProcessor {
     const cast = detectedChars.length > 0
       ? detectedChars.map((name, i) => ({
           name: name,
-          role: `Character ${i+1}`,
+          role: 'Character ' + (i+1),
           emoji: ['🤴','👸','🧙','⚔️','👧','🐰','🦋','🐿️'][i % 8],
           voice: {
             pitch: 0.7 + (i * 0.1),
@@ -136,8 +140,8 @@ class PDFAutoProcessor {
       ];
 
     const scenes = chunks.map((chunk, i) => ({
-      id: `scene${i+1}`,
-      title: `Scene ${i+1}`,
+      id: 'scene' + (i+1),
+      title: 'Scene ' + (i+1),
       setting: chunk.slice(0, 3).join(' ').substring(0, 120) + '...',
       mood: ['mysterious', 'warm', 'dramatic', 'playful', 'wise'][i % 5],
       bg: [
@@ -155,7 +159,7 @@ class PDFAutoProcessor {
     lines.forEach((line, i) => {
       if (line.includes('--- PAGE') && i > 0) {
         const pageNum = parseInt(line.match(/PAGE (\d+)/)?.[1] || '1');
-        currentScene = `scene${Math.min(Math.ceil(pageNum / 2), scenes.length)}`;
+        currentScene = 'scene' + Math.min(Math.ceil(pageNum / 2), scenes.length);
       }
 
       let speaker = cast[0].name;
@@ -188,10 +192,10 @@ class PDFAutoProcessor {
 
     const episode = {
       id: 'auto-ep01',
-      title: `Auto-Processed: ${lang} Story`,
-      subtitle: `Extracted from PDF • ${this.pdfDoc?.numPages || '?'} pages • ${script.length} lines`,
+      title: 'Auto-Processed: ' + lang + ' Story',
+      subtitle: 'Extracted from PDF · ' + (this.pdfDoc?.numPages || '?') + ' pages · ' + script.length + ' lines',
       art: '📄',
-      duration: `${Math.ceil(script.length * 0.3)} min`,
+      duration: Math.ceil(script.length * 0.3) + ' min',
       date: 'Auto',
       ages: 'All ages',
       audio: '',
@@ -246,7 +250,7 @@ class PDFAutoProcessor {
       statusEl.textContent = msg;
       statusEl.className = 'status-msg show ' + type;
     }
-    console.log(`[PDF] ${msg}`);
+    console.log('[PDF] ' + msg);
   }
 
   async process(url) {
