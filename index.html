@@ -1,68 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chandamama Moonlight Stories — Free Children's Podcast Theater</title>
-  <meta name="description" content="Ancient Sanskrit tales retold in 8 languages. PDF-to-podcast theater with character voices for children.">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chandamama Moonlight Stories — Free Children's Podcast Theater</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f23;
+  --card: #1a1a2e;
+  --accent: #7c3aed;
+  --accent2: #a855f7;
+  --success: #22c55e;
+  --warn: #fbbf24;
+  --danger: #ef4444;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+header {
+  text-align: center;
+  padding: 40px 20px 20px;
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
+}
+header h1 { font-size: 2.2rem; margin: 0; color: #fff; }
+header p { color: var(--muted); margin: 8px 0 0; font-size: 1.05rem; }
+.nav-pills {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.nav-pills span {
+  padding: 8px 16px;
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.3);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--accent2);
+}
+section { margin: 32px 0; }
+section h2 { font-size: 1.4rem; margin-bottom: 12px; color: #fff; }
+section h3 { font-size: 1.1rem; margin-bottom: 8px; color: #fff; }
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+.lang-card {
+  padding: 16px 12px;
+  background: var(--card);
+  border: 2px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lang-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.lang-card.active { border-color: var(--accent); background: rgba(124,58,237,0.15); }
+.lang-card .flag { font-size: 28px; display: block; margin-bottom: 6px; }
+.lang-card .name { font-weight: 700; font-size: 14px; }
+.lang-card .native { font-size: 12px; color: var(--muted); }
+#pdfDropZone {
+  border: 2px dashed rgba(124,58,237,0.4);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: rgba(124,58,237,0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#pdfDropZone.dragover {
+  border-color: var(--accent);
+  background: rgba(124,58,237,0.1);
+}
+#pdfDropZone .icon { font-size: 48px; margin-bottom: 12px; }
+.status-msg {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 12px 0;
+  font-size: 14px;
+  display: none;
+}
+.status-msg.show { display: block; }
+.status-msg.ok { background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
+.status-msg.info { background: rgba(124,58,237,0.1); color: var(--accent2); border: 1px solid rgba(124,58,237,0.2); }
+.status-msg.err { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+.story-card {
+  padding: 14px;
+  margin: 10px 0;
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.story-card:hover { border-color: var(--accent); }
+.story-card.active { border-color: var(--accent); background: rgba(124,58,237,0.1); }
+.story-card strong { color: #fff; font-size: 15px; }
+.story-card div { color: var(--muted); font-size: 12px; margin-top: 4px; }
+#storyEditor, #castEditor, #translationPanel {
+  display: none;
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.cast-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  margin: 6px 0;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+}
+.cast-row .emoji { font-size: 24px; }
+.cast-row select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: inherit;
+}
+.trans-progress-wrap {
+  background: #333;
+  height: 14px;
+  border-radius: 7px;
+  margin: 12px 0;
+  overflow: hidden;
+  border: 1px solid var(--accent);
+}
+.trans-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 0.3s ease;
+}
+.about {
+  padding: 24px;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-top: 40px;
+}
+.about h3 { margin-top: 0; }
+.about p { color: var(--muted); font-size: 14px; }
+</style>
 </head>
 <body>
-  <div class="stars-bg"></div>
-  <header class="hero">
-    <div class="moon">
-      <div class="moon-face">🌙</div>
-      <div class="moon-glow"></div>
-    </div>
-    <h1>Chandamama</h1>
-    <p class="subtitle">Moonlight Stories for Little Travelers</p>
-    <p class="tagline">Ancient Sanskrit tales, retold with drama character voices in 8 languages — completely free, forever. Upload a PDF, pick a story, assign voices, and listen.</p>
-    <div class="hero-badges">
-      <span class="badge">🎭 Theater</span>
-      <span class="badge">📖 Storybook</span>
-      <span class="badge">🎧 Podcast</span>
-      <span class="badge">📄 PDF Import</span>
-      <span class="badge">🌐 8 Languages</span>
+<div class="container">
+  <header>
+    <h1>🌙 Chandamama Moonlight Stories</h1>
+    <p>Moonlight Stories for Little Travelers</p>
+    <p style="font-size:0.95rem;color:var(--muted);">Ancient Sanskrit tales, retold with drama character voices in 8 languages — completely free, forever. Upload a PDF, pick a story, assign voices, and listen.</p>
+    <div class="nav-pills">
+      <span>🎭 Theater</span>
+      <span>📖 Storybook</span>
+      <span>🎧 Podcast</span>
+      <span>📄 PDF Import</span>
+      <span>🌐 8 Languages</span>
     </div>
   </header>
-  <main>
-    <section>
-      <h2>Choose Your Language</h2>
-      <p class="section-desc">Select the language for translation and voice output.</p>
-      <div class="grid" id="langGrid"></div>
-      <p class="pdf-status" id="currentLangLabel" style="margin-top:10px; font-size:0.85rem; color:var(--moon-gold);">Target: TE</p>
-    </section>
-    <section>
-      <h2>📄 Import from PDF</h2>
-      <p class="section-desc">Upload a Chandamama PDF. We'll extract pages, detect stories/episodes, and let you dramatize them with character voices.</p>
-      <div class="pdf-zone" id="pdfDropZone" onclick="document.getElementById('pdfInput').click()">
-        <div class="pdf-icon">📚</div>
-        <h3>Drop PDF here or click to browse</h3>
-        <p>Supports storybooks, comics, and scanned tales</p>
-        <input type="file" id="pdfInput" accept="application/pdf">
+
+  <section>
+    <h2>Choose Your Language</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">Select the language for translation and voice output.</p>
+    <div id="langGrid" class="lang-grid"></div>
+    <div id="currentLangLabel" style="margin-top:12px;font-weight:700;color:var(--accent2);">Target: TE</div>
+  </section>
+
+  <section>
+    <h2>📄 Import from PDF</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">Upload a Chandamama PDF. We'll extract pages, detect stories/episodes, and let you dramatize them with character voices.</p>
+    <div id="pdfDropZone">
+      <div class="icon">📚</div>
+      <div style="font-weight:700;">Drop PDF here or click to browse</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">Supports storybooks, comics, and scanned tales</div>
+      <input type="file" id="pdfInput" accept="application/pdf" style="display:none;">
+    </div>
+    <div id="pdfStatus" class="status-msg"></div>
+  </section>
+
+  <section>
+    <div id="storySelector" style="display:none;"></div>
+    <div id="storyEditor"></div>
+    <div id="castEditor"></div>
+    <div id="translationPanel">
+      <h3>🌐 Translation Progress</h3>
+      <div class="trans-progress-wrap">
+        <div id="transProgress" class="trans-progress-fill"></div>
       </div>
-      <div class="pdf-status" id="pdfStatus"></div>
-    </section>
-    <section id="storySelector" style="display:none;"></section>
-    <section id="fullBookReader" style="display:none;"></section>
-    <section id="storyEditor" style="display:none;"></section>
-    <section class="about-section">
-      <h2>About Chandamama</h2>
-      <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
-      <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
-      <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
-      <div class="source-link">
-        <a href="https://archive.org/details/Chandamama_Sanskrit_1999" target="_blank" rel="noopener">📚 View Original Source on Archive.org</a>
-      </div>
-    </section>
-  </main>
-  <footer>
-    <p>Made with 🌙 for children everywhere. Source: <a href="https://archive.org/details/Chandamama_Sanskrit_1999">Chandamama Sanskrit 1999</a> via Archive.org.</p>
-    <p>Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>.</p>
-  </footer>
-  <script src="assets/js/app.js?v=4"></script>
+      <div id="translatedText" style="font-size:13px;color:var(--muted);min-height:40px;"></div>
+    </div>
+  </section>
+
+  <section class="about">
+    <h3>About Chandamama</h3>
+    <p>In 1947, a magical magazine called <strong>Chandamama</strong> ("Moon Uncle") was born in India. For decades, it told stories to children across the subcontinent — in Sanskrit, Telugu, Hindi, Tamil, Bengali, and more.</p>
+    <p>These stories carried ancient wisdom: lessons of <em>dharma</em> (doing what is right), <em>ahimsa</em> (kindness to all living things), and courage that comes in all sizes.</p>
+    <p>Now, from the <strong>December 1999 Sanskrit issue</strong> preserved on Archive.org, we are bringing these tales back — as free podcasts and interactive storybooks, in 8 languages, for children everywhere.</p>
+  </section>
+</div>
+
+<script src="assets/js/pdf-processor.js"></script>
+<script src="assets/js/app.js"></script>
 </body>
 </html>

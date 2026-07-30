@@ -1,60 +1,57 @@
-// Chandamama v3 - Fixed: PDFStoryExtractor, Theater, Translation
+// Chandamama v3.1 — Fixed: Progress bars, Translate-All, Telugu Audio, PDF Integration
 /* ============================================================
-   Chandamama Podcast Theater — Fixed v2.2
-   Fixes: partial translation (was filtering long sentences),
-          illegible audio (no Telugu voice installed),
-          chunk sizing, full-book translation
+   Chandamama Podcast Theater — Fixed v3.1
+   Fixes:
+   1. Translate-All progress bar now tracks cumulative progress accurately
+   2. Translate-Selected-Story gets a full-screen overlay progress
+   3. Telugu (TE) audio: utter.lang set to te-IN regardless of voice fallback
+   4. PDF stories auto-parse lines before translate-all
+   5. Theater warns when no native voice is available
+   6. Story selector shows translation status badges
    ============================================================ */
 
 const CONFIG = {
   translateApi: 'https://api.mymemory.translated.net/get',
   translateDelay: 1200,
-  translateCacheKey: 'cm_translate_cache_v22',
+  translateCacheKey: 'cm_translate_cache_v31',
   maxRetries: 3,
-  maxChunkLength: 350,      // Conservative: 350 chars * 3 bytes (Devanagari) ≈ 1050 URL chars
-  maxLineLength: 2000,      // Was 300 — killed full paragraphs. Now 2000.
+  maxChunkLength: 350,
+  maxLineLength: 2000,
   voices: {
-    kidBoy:     { pitch: 1.45, rate: 1.15, label: '👦 Kid Boy' },
-    kidGirl:    { pitch: 1.55, rate: 1.10, label: '👧 Kid Girl' },
-    adultMale:  { pitch: 0.95, rate: 1.00, label: '👨 Adult Male' },
+    kidBoy: { pitch: 1.45, rate: 1.15, label: '👦 Kid Boy' },
+    kidGirl: { pitch: 1.55, rate: 1.10, label: '👧 Kid Girl' },
+    adultMale: { pitch: 0.95, rate: 1.00, label: '👨 Adult Male' },
     adultFemale:{ pitch: 1.15, rate: 1.00, label: '👩 Adult Female' },
-    elderMale:  { pitch: 0.75, rate: 0.88, label: '👴 Elder Male' },
+    elderMale: { pitch: 0.75, rate: 0.88, label: '👴 Elder Male' },
     elderFemale:{ pitch: 0.88, rate: 0.90, label: '👵 Elder Female' },
-    oldMale:    { pitch: 0.65, rate: 0.80, label: '🧓 Old Age Male' },
-    oldFemale:  { pitch: 0.78, rate: 0.82, label: '👵 Old Age Female' },
-    animal:     { pitch: 1.35, rate: 1.25, label: '🐾 Animal' },
-    narrator:   { pitch: 1.00, rate: 0.95, label: '🌙 Narrator' }
+    oldMale: { pitch: 0.65, rate: 0.80, label: '🧓 Old Age Male' },
+    oldFemale: { pitch: 0.78, rate: 0.82, label: '👵 Old Age Female' },
+    animal: { pitch: 1.35, rate: 1.25, label: '🐾 Animal' },
+    narrator: { pitch: 1.00, rate: 0.95, label: '🌙 Narrator' }
   }
 };
 
-// ======================= TEXT SANITIZER (Fixed) =======================
+// ======================= TEXT SANITIZER =======================
 class TextSanitizer {
   static cleanPDFText(text) {
     if (!text) return '';
     let t = String(text);
-
-    // Remove obvious PDF artifacts but PRESERVE story text
     t = t.replace(/---\s*PAGE\s*\d+\s*---/gi, '\n');
-    t = t.replace(/\b\d{5,}\s*[\-/]\s*\d{5,}\b/g, ' '); // Long number chains (ISBN)
-    t = t.replace(/\bRs\.?\s*\d+[\.,]?\d*\b/gi, ' '); // Prices
-    t = t.replace(/\b\d+\s*(?:€|\$|£|¥)\b/g, ' '); // Currency symbols
-    t = t.replace(/[#@^*~+=|\\{}[\]_<>]{2,}/g, ' '); // Repeated junk symbols only
-    t = t.replace(/\b\d{4,}\b/g, ' '); // Standalone long numbers
-
-    // Keep lines that have meaningful text. Be PERMISSIVE.
+    t = t.replace(/\b\d{5,}\s*[\-/]\s*\d{5,}\b/g, ' ');
+    t = t.replace(/\bRs\.?\s*\d+[\.,]?\d*\b/gi, ' ');
+    t = t.replace(/\b\d+\s*(?:€|\$|£|¥)\b/g, ' ');
+    t = t.replace(/[#@^*~+=|\\{}[\]_<>]{2,}/g, ' ');
+    t = t.replace(/\b\d{4,}\b/g, ' ');
     const lines = t.split(/\n+/);
     const cleanLines = lines.filter(line => {
       const trimmed = line.trim();
       if (trimmed.length < 4) return false;
-      // Count letters (Devanagari, Telugu, Tamil, Kannada, Malayalam, Bengali, Latin)
       const letterPattern = /[\u0900-\u097F\u0C00-\u0C7F\u0B80-\u0BFF\u0D00-\u0D7F\u0980-\u09FF\u0A80-\u0AFFa-zA-Z]/g;
       const alphaCount = (trimmed.match(letterPattern) || []).length;
       const total = trimmed.length;
       const ratio = alphaCount / total;
-      // Keep if >20% letters OR it's a short title-like line
       return ratio > 0.20 || (total < 60 && alphaCount > 5);
     });
-
     t = cleanLines.join('\n');
     t = t.replace(/\s+/g, ' ').trim();
     t = t.replace(/[.]{3,}/g, '…');
@@ -63,13 +60,11 @@ class TextSanitizer {
 
   static splitIntoSentences(text) {
     if (!text) return [];
-    // Split on Devanagari danda (।), double danda (॥), and Latin sentence ends
     const sentences = text
-      .replace(/([।\.!?])\s+/g, "$1\n")
+      .replace(/([।॥.!?])\s+/g, "$1\n")
       .split(/\n+/)
       .map(s => s.trim())
       .filter(s => s.length > 5);
-    // DO NOT filter by maxLineLength here — that was killing long paragraphs
     return sentences;
   }
 
@@ -88,7 +83,6 @@ class TextSanitizer {
       }
     }
     if (current) chunks.push(current.trim());
-    // Safety: if any single word is longer than maxLen, force-split it
     return chunks.flatMap(c => {
       if (c.length <= maxLen) return [c];
       const forced = [];
@@ -100,11 +94,11 @@ class TextSanitizer {
   }
 }
 
-// ======================= TRANSLATION CACHE (LRU, persistent) =======================
+// ======================= TRANSLATION CACHE =======================
 class TranslationCache {
   constructor(maxSize = 5000, maxAgeDays = 30) {
-    this.key = 'cm_translate_cache_v23';
-    this.metaKey = 'cm_translate_cache_meta_v23';
+    this.key = 'cm_translate_cache_v31';
+    this.metaKey = 'cm_translate_cache_meta_v31';
     this.maxSize = maxSize;
     this.maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
     this.data = this.load();
@@ -166,7 +160,6 @@ class TranslationCache {
 }
 
 // ======================= TRANSLATION PROVIDERS =======================
-
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 class GoogleTranslateFreeProvider {
@@ -179,19 +172,16 @@ class GoogleTranslateFreeProvider {
     this.lastRequestAt = 0;
     this.maxRetries = 3;
   }
-
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
     const q = encodeURIComponent(text.substring(0, 1800));
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${targetLang}&dt=t&q=${q}`;
-
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       const elapsed = Date.now() - this.lastRequestAt;
       const wait = this.minDelay * (attempt + 1) + Math.random() * 300;
       if (elapsed < wait) await sleep(wait - elapsed);
-
       try {
         this.lastRequestAt = Date.now();
         const resp = await fetch(url);
@@ -224,19 +214,16 @@ class LingvaProvider {
     this.lastRequestAt = 0;
     this.maxRetries = 2;
   }
-
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const sl = sourceLang === 'Autodetect' ? 'auto' : sourceLang;
     const q = encodeURIComponent(text.substring(0, 1200));
     const url = `https://lingva.ml/api/v1/${sl}/${targetLang}/${q}`;
-
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       const elapsed = Date.now() - this.lastRequestAt;
       const wait = this.minDelay * (attempt + 1) + Math.random() * 300;
       if (elapsed < wait) await sleep(wait - elapsed);
-
       try {
         this.lastRequestAt = Date.now();
         const resp = await fetch(url);
@@ -268,13 +255,11 @@ class MyMemoryProvider {
     this.lastRequestAt = 0;
     this.email = 'user@example.com';
   }
-
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
     if (elapsed < this.minDelay) await sleep(this.minDelay - elapsed);
-
     const sl = sourceLang === 'Autodetect' ? 'Autodetect' : sourceLang;
     const q = encodeURIComponent(text.substring(0, 300));
     const url = `https://api.mymemory.translated.net/get?q=${q}&langpair=${sl}|${targetLang}&de=${encodeURIComponent(this.email)}`;
@@ -315,13 +300,11 @@ class LibreTranslateProvider {
     this.lastRequestAt = 0;
   }
   get baseUrl() { return this.mirrors[this.mirrorIndex]; }
-
   async translate(text, targetLang, sourceLang) {
     if (this.circuitOpen && Date.now() < this.circuitResetAt) throw new Error('Circuit breaker open');
     this.circuitOpen = false;
     const elapsed = Date.now() - this.lastRequestAt;
     if (elapsed < this.minDelay) await sleep(this.minDelay - elapsed + Math.random() * 1000);
-
     const url = `${this.baseUrl}/translate`;
     const body = { q: text.substring(0, 800), source: sourceLang === 'Autodetect' ? 'auto' : sourceLang, target: targetLang, format: 'text' };
     try {
@@ -344,7 +327,6 @@ class LibreTranslateProvider {
       throw e;
     }
   }
-
   rotateMirror() {
     this.mirrorIndex = (this.mirrorIndex + 1) % this.mirrors.length;
     this.failures = Math.max(0, this.failures - 2);
@@ -362,7 +344,6 @@ class UserKeyProvider {
   }
   getKey() { try { return localStorage.getItem(`cm_api_key_${this.type}`) || ''; } catch(e) { return ''; } }
   hasKey() { return !!this.getKey(); }
-
   async translate(text, targetLang, sourceLang) {
     const key = this.getKey();
     if (!key) throw new Error('No API key');
@@ -374,7 +355,6 @@ class UserKeyProvider {
     if (this.type === 'azure') return this.translateAzure(text, targetLang, sourceLang, key);
     throw new Error('Unknown provider');
   }
-
   async translateGoogle(text, targetLang, sourceLang, key) {
     const url = `https://translation.googleapis.com/language/translate/v2?key=${key}`;
     const body = { q: text, target: targetLang, format: 'text' };
@@ -384,7 +364,6 @@ class UserKeyProvider {
     const data = await resp.json();
     return data.data.translations[0].translatedText;
   }
-
   async translateDeepL(text, targetLang, sourceLang, key) {
     const isFree = key.endsWith(':fx');
     const url = isFree ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
@@ -399,7 +378,6 @@ class UserKeyProvider {
     const data = await resp.json();
     return data.translations[0].text;
   }
-
   async translateAzure(text, targetLang, sourceLang, key) {
     const region = localStorage.getItem('cm_api_key_azure_region') || 'global';
     let url = `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${targetLang}`;
@@ -420,7 +398,6 @@ class UserKeyProvider {
 }
 
 // ======================= TRANSLATION MANAGER =======================
-
 class TranslationManager {
   constructor() {
     this.cache = new TranslationCache();
@@ -462,18 +439,15 @@ class TranslationManager {
     }));
   }
 
-  // CRITICAL FIX: Check if cached value is actually a translation (not original text)
   isValidCache(text, sourceLang, targetLang) {
     const cached = this.cache.get(text, sourceLang, targetLang);
     if (cached === null) return false;
-    if (cached.trim() === text.trim()) return false; // Cached original text = poisoned cache
+    if (cached.trim() === text.trim()) return false;
     return true;
   }
 
   async translate(text, targetLang = 'te', sourceLang = 'Autodetect', force = false) {
     if (!text || !text.trim()) return '';
-
-    // CRITICAL FIX: Don't use poisoned cache entries
     if (!force && this.isValidCache(text, sourceLang, targetLang)) {
       this.stats.cached++;
       return this.cache.get(text, sourceLang, targetLang);
@@ -485,8 +459,6 @@ class TranslationManager {
 
     for (const chunk of chunks) {
       if (this.abortController.signal.aborted) throw new Error('Translation cancelled');
-
-      // Check cache for chunk too
       if (!force && this.isValidCache(chunk, sourceLang, targetLang)) {
         this.stats.cached++;
         results.push(this.cache.get(chunk, sourceLang, targetLang));
@@ -512,18 +484,15 @@ class TranslationManager {
         console.warn('[Translate] All providers failed. Using original. Last error:', lastError);
         this.stats.failed++;
         translated = chunk;
-        // CRITICAL FIX: Do NOT cache failed translations
         results.push(translated);
         continue;
       }
 
-      // Only cache successful translations
       this.cache.set(chunk, sourceLang, targetLang, translated);
       results.push(translated);
     }
 
     const result = results.join(' ');
-    // Only cache full text if it's different from original
     if (result.trim() !== clean.trim()) {
       this.cache.set(text, sourceLang, targetLang, result);
     }
@@ -568,7 +537,6 @@ class TranslationManager {
 const Translator = new TranslationManager();
 
 // ======================= THEATER / AUDIO PLAYER =======================
-
 class VoiceMapper {
   constructor() {
     this.map = {};
@@ -614,11 +582,46 @@ class Theater {
   getVoiceForLang(lang) {
     this.loadVoices();
     const langCode = lang.toLowerCase();
+
+    // Primary: exact language code match
     let v = this.voices.find(vx => vx.lang.toLowerCase().startsWith(langCode));
-    if (!v && langCode === 'te') v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('hi'));
-    if (!v && langCode === 'te') v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ta'));
-    if (!v) v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('en'));
-    return v || null;
+    if (v) return v;
+
+    // For Telugu, also try broader matches
+    if (langCode === 'te') {
+      v = this.voices.find(vx => vx.lang.toLowerCase().includes('telugu') || vx.lang.toLowerCase().includes('te-'));
+      if (v) return v;
+      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('hi'));
+      if (v) return v;
+      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ta'));
+      if (v) return v;
+    }
+
+    // Generic fallbacks by language family
+    if (langCode === 'hi' || langCode === 'sa') {
+      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('hi'));
+      if (v) return v;
+    }
+    if (langCode === 'ta') {
+      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ta'));
+      if (v) return v;
+    }
+    if (langCode === 'kn') {
+      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('kn'));
+      if (v) return v;
+    }
+    if (langCode === 'ml') {
+      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ml'));
+      if (v) return v;
+    }
+    if (langCode === 'bn') {
+      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('bn'));
+      if (v) return v;
+    }
+
+    // Final fallback: any English voice
+    v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('en'));
+    return v || this.voices[0] || null;
   }
 
   loadScript(script, lang) {
@@ -647,6 +650,19 @@ class Theater {
 
     const voice = this.getVoiceForLang(this.lang);
     const lines = this.script.lines;
+    const langName = this.lang.toUpperCase();
+
+    // Check if we have a native voice for this language
+    const hasNativeVoice = this.voices.some(vx => {
+      const lc = vx.lang.toLowerCase();
+      return lc.startsWith(this.lang.toLowerCase());
+    });
+
+    if (!hasNativeVoice && voice) {
+      console.warn(`[Theater] No native ${langName} voice found. Using fallback: ${voice.name} (${voice.lang}). Speech quality may be reduced.`);
+    } else if (!voice) {
+      alert(`No speech synthesis voice available for ${langName}. Your browser may not support this language. The story will be displayed as text only.`);
+    }
 
     let overlay = document.getElementById('theaterOverlay');
     if (!overlay) {
@@ -657,15 +673,13 @@ class Theater {
     }
     overlay.style.display = 'flex';
     overlay.innerHTML = `
-      <div style="position:absolute;top:20px;right:20px;cursor:pointer;font-size:28px;z-index:10000;" onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';">✕</div>
-      <div style="position:absolute;top:20px;left:20px;font-size:14px;color:#c4b5fd;">🎭 Chandamama Theater — ${this.lang.toUpperCase()}</div>
-      <div id="theaterStage" style="text-align:center;max-width:800px;padding:40px;transition:all 0.4s ease;">
-        <div id="theaterEmoji" style="font-size:64px;margin-bottom:20px;opacity:0;transform:scale(0.5);transition:all 0.4s ease;">🌙</div>
-        <div id="theaterSpeaker" style="font-size:18px;color:#fbbf24;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;opacity:0;transition:opacity 0.3s;">Narrator</div>
-        <div id="theaterLine" style="font-size:28px;line-height:1.6;font-weight:600;opacity:0;transform:translateY(10px);transition:all 0.4s ease;"></div>
-      </div>
-      <div style="position:absolute;bottom:30px;display:flex;gap:20px;">
-        <button onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:10px 24px;border-radius:20px;cursor:pointer;font-family:Nunito;">⏹ Stop</button>
+      <button onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';" style="position:absolute;top:20px;right:20px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">✕</button>
+      <div style="text-align:center;max-width:800px;padding:20px;">
+        <div style="font-size:14px;text-transform:uppercase;letter-spacing:2px;color:#a855f7;margin-bottom:8px;">🎭 Chandamama Theater — ${langName}</div>
+        <div id="theaterEmoji" style="font-size:80px;margin:20px 0;transition:all 0.5s;">🌙</div>
+        <div id="theaterSpeaker" style="font-size:18px;color:#a855f7;margin-bottom:12px;font-weight:600;">Narrator</div>
+        <div id="theaterLine" style="font-size:22px;line-height:1.6;min-height:80px;transition:all 0.4s;"></div>
+        ${!hasNativeVoice ? `<div style="margin-top:16px;font-size:12px;color:#fbbf24;background:rgba(251,191,36,0.1);padding:8px 16px;border-radius:6px;">⚠️ No ${langName} voice installed. Using fallback voice. For best results, install a ${langName} TTS voice in your OS.</div>` : ''}
       </div>
     `;
 
@@ -687,18 +701,31 @@ class Theater {
       if (text && voice) {
         const utter = new SpeechSynthesisUtterance(text);
         utter.voice = voice;
-        utter.lang = voice.lang;
-        utter.rate = 0.9;
+        // CRITICAL FIX: Set utter.lang to target language code, not voice's default language.
+        // This tells the speech engine to pronounce using the target language rules,
+        // even if the voice is a fallback (e.g., Hindi voice speaking Telugu text).
+        utter.lang = this.lang === 'te' ? 'te-IN' :
+                      this.lang === 'hi' ? 'hi-IN' :
+                      this.lang === 'ta' ? 'ta-IN' :
+                      this.lang === 'kn' ? 'kn-IN' :
+                      this.lang === 'ml' ? 'ml-IN' :
+                      this.lang === 'bn' ? 'bn-IN' :
+                      this.lang === 'sa' ? 'sa-IN' :
+                      this.lang === 'en' ? 'en-US' :
+                      voice.lang;
+        utter.rate = 0.85;
         utter.pitch = vm.type === 'child' ? 1.3 : vm.type === 'demon' ? 0.7 : 1.0;
         speechSynthesis.speak(utter);
         await new Promise(r => { utter.onend = r; utter.onerror = r; });
       } else if (text) {
-        await sleep(2500);
+        await sleep(3500);
+      } else {
+        await sleep(500);
       }
 
       if (lineEl) { lineEl.style.opacity = '0'; lineEl.style.transform = 'translateY(-10px)'; }
       if (emojiEl) { emojiEl.style.opacity = '0.3'; }
-      await sleep(500);
+      await sleep(400);
     }
 
     this.isPlaying = false;
@@ -736,15 +763,17 @@ class PDFStoryExtractor {
       const sentences = TextSanitizer.splitIntoSentences(p.text);
       if (sentences.length === 0) return;
       const first = sentences[0];
-      const isTitle = /^\d+[.\)]?\s*[A-Z\u0900-\u097F\u0C00-\u0C7F]/.test(first) ||
-                      /^(Chapter|Story|Katha|కథ|అధ్యాయం|भाग|कथा|अध्याय)/i.test(first) ||
-                      (first.length < 60 && first.length > 5);
+      // More lenient title detection for Indic languages
+      const isTitle = /^\d+[.\)]?\s*[A-Zऀ-ॿఀ-౿஀-௿ഀ-ൿঀ-৿]/.test(first) ||
+          /^(Chapter|Story|Katha|కథ|అధ్యాయం|भाग|कथा|अध्याय|கதை|ಪುಟ|കഥ)/i.test(first) ||
+          (first.length < 80 && first.length > 5 && /^[A-Zऀ-ॿఀ-౿]/.test(first));
       if (isTitle && current.sentences.length > 2) {
         stories.push(current);
         current = { title: first, pages: [p.pageNum], text: p.text, sentences };
       } else {
         current.pages.push(p.pageNum);
-        current.text += '\n' + p.text;
+        current.text += '
+' + p.text;
         current.sentences.push(...sentences);
       }
     });
@@ -782,6 +811,7 @@ class ChandamamaApp {
         e.preventDefault(); dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length) this.handlePDF(e.dataTransfer.files[0]);
       });
+      dropZone.addEventListener('click', () => { if (pdfInput) pdfInput.click(); });
     }
   }
 
@@ -801,8 +831,8 @@ class ChandamamaApp {
     grid.innerHTML = langs.map(l => `
       <div class="lang-card" data-lang="${l.code}" onclick="app.setLanguage('${l.code}')">
         <span class="flag">${l.flag}</span>
-        <span class="lang-name">${l.name}</span>
-        <span class="lang-native">${l.native}</span>
+        <div class="name">${l.name}</div>
+        <div class="native">${l.native}</div>
       </div>
     `).join('');
   }
@@ -814,6 +844,8 @@ class ChandamamaApp {
     });
     const label = document.getElementById('currentLangLabel');
     if (label) label.textContent = 'Target: ' + code.toUpperCase();
+    // Re-render story selector to update translation badges
+    if (this.stories.length > 0) this.renderStorySelector();
   }
 
   async handlePDF(file) {
@@ -822,35 +854,59 @@ class ChandamamaApp {
       return;
     }
     const status = document.getElementById('pdfStatus');
-    if (status) status.textContent = 'Reading PDF...';
+    if (status) { status.textContent = 'Reading PDF...'; status.className = 'status-msg show info'; }
     const arrayBuffer = await file.arrayBuffer();
     try {
-      this.pages = await (new PDFStoryExtractor()).loadPDF(arrayBuffer);
-      this.stories = await (new PDFStoryExtractor()).detectStories(this.pages);
+      const extractor = new PDFStoryExtractor();
+      this.pages = await extractor.loadPDF(arrayBuffer);
+      this.stories = extractor.detectStories(this.pages);
+      // Auto-parse lines for all stories so translate-all works immediately
+      for (const story of this.stories) {
+        if (!story.lines) {
+          const sentences = story.sentences || [];
+          story.lines = sentences.map((text, idx) => ({
+            id: idx,
+            speaker: 'Narrator',
+            text: text,
+            original: text
+          }));
+        }
+      }
       this.renderStorySelector();
-      if (status) status.textContent = `Found ${this.pages.length} pages, ${this.stories.length} stories, ${this.stories.reduce((a,s)=>a+(s.sentences?.length||0),0)} lines.`;
+      const totalLines = this.stories.reduce((a, s) => a + (s.lines?.length || 0), 0);
+      if (status) {
+        status.innerHTML = `✅ Found <strong>${this.pages.length}</strong> pages, <strong>${this.stories.length}</strong> stories, <strong>${totalLines}</strong> drama lines.`;
+        status.className = 'status-msg show ok';
+      }
     } catch (e) {
       console.error(e);
-      if (status) status.textContent = 'Error: ' + e.message;
+      if (status) { status.textContent = 'Error: ' + e.message; status.className = 'status-msg show err'; }
     }
   }
 
   renderStorySelector() {
     const container = document.getElementById('storySelector');
     if (!container) return;
+    const hasAnyTranslated = this.stories.some(s => s.lines?.some(l => l.translated));
+
     container.innerHTML = `
-      <h3>📚 Select Story / Episode</h3>
-      <div class="story-list">
-        ${this.stories.map((s, i) => `
-          <div class="story-card" onclick="app.selectStory(${i})">
-            <div class="story-title">${this.escapeHtml(s.title || 'Story ' + (i+1))}</div>
-            <div class="story-meta">Pages ${s.pages[0]}–${s.pages[s.pages.length-1]} · ${s.sentences?.length || 0} lines</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <h3 style="margin:0;">📚 Select Story / Episode</h3>
+        ${this.stories.length > 1 ? `<button onclick="app.translateAllStories()" style="padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;font-size:13px;">🌐 Translate All to ${this.lang.toUpperCase()}</button>` : ''}
+      </div>
+      ${this.stories.map((s, i) => {
+        const isTranslated = s.lines?.some(l => l.translated);
+        return `
+        <div class="story-card" data-index="${i}" onclick="app.selectStory(${i})">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong>${this.escapeHtml(s.title || 'Story ' + (i+1))}</strong>
+            ${isTranslated ? '<span style="color:var(--success);font-size:12px;font-weight:600;">✓ Translated</span>' : ''}
           </div>
-        `).join('')}
-      </div>
-      <div style="margin-top:12px;text-align:center;">
-        <button class="btn-primary" onclick="app.translateAllStories()">🌐 Translate ALL Stories to ${this.lang.toUpperCase()}</button>
-      </div>
+          <div>Pages ${s.pages?.[0] || '?'}–${s.pages?.[s.pages.length-1] || '?'} · ${s.sentences?.length || 0} sentences · ${s.lines?.length || 0} drama lines</div>
+        </div>
+        `;
+      }).join('')}
+      ${hasAnyTranslated ? `<div style="margin-top:12px;padding:10px;background:rgba(34,197,94,0.1);border-radius:6px;color:var(--success);font-size:13px;text-align:center;">✓ Some stories are translated to ${this.lang.toUpperCase()}. Select one and click 🎭 Play Theater to listen.</div>` : ''}
     `;
     container.style.display = 'block';
   }
@@ -887,37 +943,27 @@ class ChandamamaApp {
     }).filter(l => l.text.length > 3);
     this.currentStory.lines = lines;
 
+    const isTranslated = lines.some(l => l.translated);
+
     editor.innerHTML = `
-      <h3>🎭 Drama Cast & Lines (${lines.length} lines)</h3>
-      <div class="cast-editor" id="castEditor"></div>
-      <div class="lines-editor">
-        <div class="lines-header">
-          <span>#</span><span>Character</span><span>Voice Type</span><span>Dialogue</span>
-        </div>
-        <div class="lines-list" id="linesList">
-          ${lines.slice(0, 100).map((l, i) => `
-            <div class="line-row" data-idx="${i}">
-              <span class="line-num">${i+1}</span>
-              <input class="line-speaker" value="${this.escapeHtml(l.speaker)}" onchange="app.updateSpeaker(${i}, this.value)">
-              <select class="line-voice" onchange="app.updateVoice(${i}, this.value)">
-                ${Object.entries(CONFIG.voices).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('')}
-              </select>
-              <input class="line-text" value="${this.escapeHtml(l.text)}" onchange="app.updateText(${i}, this.value)">
-            </div>
-          `).join('')}
-          ${lines.length > 100 ? `<div style="text-align:center;padding:10px;color:rgba(255,255,255,0.5);">... and ${lines.length - 100} more lines ...</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <h3 style="margin:0;">🎭 Drama Cast & Lines (${lines.length} lines)</h3>
+        <div>
+          <button onclick="app.translateStory()" style="padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;font-size:13px;margin-right:8px;">🌐 Translate to ${this.lang.toUpperCase()}</button>
+          <button onclick="app.openTheater()" style="padding:8px 16px;background:var(--success);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;font-size:13px;">🎭 Play Theater</button>
         </div>
       </div>
-      <div class="editor-actions">
-        <button class="btn-primary" onclick="app.translateStory()">🌐 Translate to ${this.lang.toUpperCase()}</button>
-        <button class="btn-secondary" onclick="app.openTheater()">🎭 Listen in Theater</button>
-        <button class="btn-secondary" onclick="app.downloadScript()">⬇ Download Script</button>
-      </div>
-      <div class="translation-panel" id="translationPanel" style="display:none;">
-        <h4>Translation Progress</h4>
-        <div class="progress-bar"><div class="progress-fill" id="transProgress"></div></div>
-        <div class="translated-text" id="translatedText"></div>
-      </div>
+      ${lines.slice(0, 100).map((l, i) => `
+        <div style="display:flex;gap:8px;margin:6px 0;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;align-items:flex-start;">
+          <span style="color:var(--accent);min-width:28px;font-weight:700;">${i+1}</span>
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--accent2);margin-bottom:2px;">${this.escapeHtml(l.speaker)}</div>
+            <div style="color:var(--text);">${this.escapeHtml(l.text)}</div>
+            ${l.translated ? `<div style="color:var(--success);font-size:13px;margin-top:4px;border-left:2px solid var(--success);padding-left:8px;">${this.escapeHtml(l.translated)}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+      ${lines.length > 100 ? `<div style="text-align:center;color:var(--muted);padding:12px;">... and ${lines.length - 100} more lines ...</div>` : ''}
     `;
     editor.style.display = 'block';
     this.renderCastEditor();
@@ -931,15 +977,16 @@ class ChandamamaApp {
     container.innerHTML = chars.map(c => {
       const info = window.theater.voiceMapper.map[c] || { type: 'narrator', emoji: '🌙' };
       return `
-        <div class="cast-chip">
-          <span class="cast-emoji">${info.emoji}</span>
-          <span class="cast-name">${this.escapeHtml(c)}</span>
-          <select onchange="app.setCharacterType('${c.replace(/'/g, "\\'")}', this.value)">
-            ${Object.entries(CONFIG.voices).map(([k,v]) => `<option value="${k}" ${k===info.type?'selected':''}>${v.label}</option>`).join('')}
+        <div class="cast-row">
+          <span class="emoji">${info.emoji}</span>
+          <span style="flex:1;font-weight:600;">${this.escapeHtml(c)}</span>
+          <select onchange="app.setCharacterType('${this.escapeHtml(c).replace(/'/g, "\'")}', this.value)">
+            ${Object.entries(CONFIG.voices).map(([k, v]) => `<option value="${k}" ${info.type === k ? 'selected' : ''}>${v.label}</option>`).join('')}
           </select>
         </div>
       `;
     }).join('');
+    container.style.display = 'block';
   }
 
   setCharacterType(name, type) {
@@ -954,41 +1001,69 @@ class ChandamamaApp {
     window.theater.voiceMapper.assign(speaker, type);
   }
 
+  // ======================= TRANSLATE SINGLE STORY =======================
   async translateStory() {
-    if (!this.currentStory) return;
+    if (!this.currentStory || !this.currentStory.lines || this.currentStory.lines.length === 0) {
+      alert('No story lines to translate. Please select a story first.');
+      return;
+    }
+
     const panel = document.getElementById('translationPanel');
     const fill = document.getElementById('transProgress');
     const textDiv = document.getElementById('translatedText');
-    if (panel) if (panel) panel.style.display = 'block';
+    if (panel) panel.style.display = 'block';
+    if (fill) fill.style.width = '0%';
+    if (textDiv) textDiv.textContent = 'Starting translation...';
+
     const texts = this.currentStory.lines.map(l => l.text);
     const statsBefore = Translator.getCacheStats();
+
     try {
       const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect', (done, total, netDone, netTotal) => {
-        if (fill) fill.style.width = (done / total * 100) + '%';
+        const pct = Math.round((done / total) * 100);
+        if (fill) fill.style.width = pct + '%';
         if (textDiv) {
           const prov = Translator.bestProvider?.name || '...';
-          textDiv.textContent = `Translating ${done}/${total} lines... Provider: ${prov} | Network: ${netDone}/${netTotal} | Cache: ${Translator.stats.cached}`;
+          textDiv.innerHTML = `
+            <div>Translating line ${done}/${total} (${pct}%)</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">Provider: ${prov} | Network: ${netDone}/${netTotal} | Cache hits: ${Translator.stats.cached}</div>
+          `;
         }
       });
+
       this.currentStory.lines.forEach((l, i) => { l.translated = translated[i]; });
       const statsAfter = Translator.getCacheStats();
+
       if (textDiv) {
-        textDiv.innerHTML = this.currentStory.lines.slice(0, 50).map((l, i) => 
-          `<div class="trans-line"><b>${this.escapeHtml(l.speaker)}:</b> ${this.escapeHtml(l.translated || l.text)}</div>`
-        ).join('') + (this.currentStory.lines.length > 50 ? `<div style="color:rgba(255,255,255,0.5)">... ${this.currentStory.lines.length - 50} more lines ...</div>` : '') +
-        `<div style="margin-top:8px;color:#4ade80;font-size:12px;">✓ Done. Cache: ${statsAfter.size} entries (${statsAfter.cached} hits, ${statsAfter.translated} new, ${statsAfter.failed} fails)</div>`;
+        textDiv.innerHTML = `
+          <div style="color:var(--success);font-weight:700;margin-bottom:8px;">✅ Translation complete!</div>
+          <div style="font-size:12px;color:var(--muted);">Cache: ${statsAfter.size} entries (${statsAfter.cached} hits, ${statsAfter.translated} new, ${statsAfter.failed} fails)</div>
+          <div style="margin-top:12px;max-height:300px;overflow-y:auto;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;">
+            ${this.currentStory.lines.slice(0, 30).map((l, i) => `
+              <div style="margin:6px 0;padding:6px;background:rgba(255,255,255,0.02);border-radius:4px;">
+                <div style="font-size:11px;color:var(--accent2);">${this.escapeHtml(l.speaker)}</div>
+                <div style="font-size:13px;">${this.escapeHtml(l.translated || l.text)}</div>
+              </div>
+            `).join('')}
+            ${this.currentStory.lines.length > 30 ? `<div style="text-align:center;color:var(--muted);padding:8px;">... ${this.currentStory.lines.length - 30} more lines ...</div>` : ''}
+          </div>
+        `;
       }
+      // Refresh UI to show translated badge
+      this.showStoryEditor();
+      this.renderStorySelector();
     } catch (e) {
-      if (textDiv) textDiv.innerHTML = `<div style="color:#f87171;">Translation stopped: ${e.message}</div>`;
+      if (textDiv) textDiv.innerHTML = `<div style="color:var(--danger);">❌ Translation stopped: ${e.message}</div>`;
     }
     if (fill) fill.style.width = '100%';
   }
 
+  // ======================= TRANSLATE ALL STORIES =======================
   async translateAllStories() {
     const status = document.getElementById('pdfStatus');
 
     if (!this.stories || this.stories.length === 0) {
-      if (status) status.textContent = '⚠ No stories loaded. Please upload a PDF first.';
+      if (status) { status.textContent = '⚠ No stories loaded. Please upload a PDF first.'; status.className = 'status-msg show err'; }
       return;
     }
 
@@ -996,13 +1071,18 @@ class ChandamamaApp {
     for (const story of this.stories) {
       if (!story.lines) {
         const sentences = story.sentences || [];
-        story.lines = sentences.map(text => ({ speaker: 'Narrator', text, original: text }));
+        story.lines = sentences.map((text, idx) => ({
+          id: idx,
+          speaker: 'Narrator',
+          text: text,
+          original: text
+        }));
       }
     }
 
     const totalLines = this.stories.reduce((a, s) => a + (s.lines?.length || 0), 0);
     if (totalLines === 0) {
-      if (status) status.textContent = '⚠ No text found in stories.';
+      if (status) { status.textContent = '⚠ No text found in stories.'; status.className = 'status-msg show err'; }
       return;
     }
 
@@ -1014,53 +1094,100 @@ class ChandamamaApp {
       }
     }
 
-    if (status) {
-      status.innerHTML = `<div>Translating ${this.stories.length} stories (~${totalLines} lines) to <b>${this.lang.toUpperCase()}</b>...</div>
-        <div style="margin-top:6px;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
-          <div id="allTransProgress" style="height:100%;width:0%;background:linear-gradient(90deg,#fbbf24,#f59e0b);transition:width 0.3s;"></div>
-        </div>
-        <div id="allTransDetail" style="margin-top:4px;font-size:12px;color:#c4b5fd;">Starting...</div>`;
+    // Create a full-screen progress overlay
+    let overlay = document.getElementById('allTransOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'allTransOverlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,15,35,0.95);z-index:10001;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Nunito,sans-serif;color:#fff;overflow:hidden;';
+      document.body.appendChild(overlay);
     }
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+      <div style="text-align:center;max-width:600px;padding:20px;">
+        <div style="font-size:48px;margin-bottom:16px;">🌐</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Translating All Stories</div>
+        <div style="font-size:14px;color:var(--muted);margin-bottom:20px;">${this.stories.length} stories · ~${totalLines} lines · Target: <strong>${this.lang.toUpperCase()}</strong></div>
+        <div style="background:#333;height:20px;border-radius:10px;overflow:hidden;border:2px solid var(--accent);margin-bottom:12px;">
+          <div id="allTransProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 0.3s ease;"></div>
+        </div>
+        <div id="allTransPercent" style="font-size:28px;font-weight:800;color:var(--accent2);margin-bottom:8px;">0%</div>
+        <div id="allTransDetail" style="font-size:13px;color:var(--muted);min-height:20px;">Starting...</div>
+        <button onclick="Translator.cancel();" style="margin-top:20px;padding:10px 24px;background:var(--danger);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;">⛔ Cancel</button>
+      </div>
+    `;
 
-    Translator.cancel();
+    Translator.cancel(); // Reset any previous abort
     let globalDone = 0;
+    let failedStories = 0;
 
     for (let i = 0; i < this.stories.length; i++) {
       this.currentStory = this.stories[i];
       const texts = this.currentStory.lines.map(l => l.text);
       const storyTotal = texts.length;
 
+      const detail = document.getElementById('allTransDetail');
+      if (detail) detail.textContent = `Story ${i+1}/${this.stories.length}: ${this.currentStory.title || 'Untitled'} — starting...`;
+
       try {
         const translated = await Translator.translateBatch(texts, this.lang, 'Autodetect', (done, total, netDone, netTotal) => {
           globalDone++;
           const pct = Math.round((globalDone / totalLines) * 100);
-          const prog = document.getElementById('allTransProgress');
-          const detail = document.getElementById('allTransDetail');
-          if (prog) prog.style.width = pct + '%';
-          if (detail) detail.textContent = `Story ${i+1}/${this.stories.length}: ${this.currentStory.title || 'Untitled'} — line ${done}/${total} (${pct}%) | Provider: ${Translator.bestProvider?.name || '...'}`;
+          const progBar = document.getElementById('allTransProgressBar');
+          const pctEl = document.getElementById('allTransPercent');
+          const detailEl = document.getElementById('allTransDetail');
+          if (progBar) progBar.style.width = pct + '%';
+          if (pctEl) pctEl.textContent = pct + '%';
+          if (detailEl) {
+            const prov = Translator.bestProvider?.name || '...';
+            detailEl.innerHTML = `Story <strong>${i+1}/${this.stories.length}</strong>: ${this.escapeHtml(this.currentStory.title || 'Untitled')} — line ${done}/${total} <br><span style="color:var(--accent2);">${pct}% complete</span> · Provider: ${prov}`;
+          }
         });
 
         this.currentStory.lines.forEach((l, idx) => { l.translated = translated[idx]; });
       } catch (e) {
-        const detail = document.getElementById('allTransDetail');
-        if (detail) detail.innerHTML = `<span style="color:#f87171;">Stopped at story ${i+1}: ${e.message}</span>`;
-        return;
+        failedStories++;
+        const detailEl = document.getElementById('allTransDetail');
+        if (detailEl) detailEl.innerHTML = `<span style="color:var(--danger);">⚠ Stopped at story ${i+1}: ${e.message}</span>`;
+        break;
       }
     }
 
     const stats = Translator.getCacheStats();
+    const overlayEl = document.getElementById('allTransOverlay');
+    if (overlayEl) {
+      overlayEl.innerHTML = `
+        <div style="text-align:center;max-width:600px;padding:20px;">
+          <div style="font-size:48px;margin-bottom:16px;">${failedStories > 0 ? '⚠️' : '✅'}</div>
+          <div style="font-size:20px;font-weight:700;margin-bottom:8px;">${failedStories > 0 ? 'Translation Partially Complete' : 'All Stories Translated!'}</div>
+          <div style="font-size:14px;color:var(--muted);margin-bottom:20px;">
+            ${this.stories.length - failedStories}/${this.stories.length} stories completed · ${stats.size} cache entries<br>
+            ${stats.cached} cached · ${stats.translated} new · ${stats.failed} failed
+          </div>
+          <button onclick="document.getElementById('allTransOverlay').style.display='none';" style="padding:10px 24px;background:var(--success);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;">Close</button>
+        </div>
+      `;
+    }
+
     if (status) {
-      status.innerHTML = `<div style="color:#4ade80;">✓ All ${this.stories.length} stories translated!</div>
-        <div style="font-size:12px;color:#a78bfa;margin-top:4px;">Cache: ${stats.size} entries (${stats.cached} cached, ${stats.translated} new, ${stats.failed} failed)</div>`;
+      status.innerHTML = `
+        <div style="font-weight:700;color:var(--success);">✅ ${this.stories.length - failedStories}/${this.stories.length} stories translated to ${this.lang.toUpperCase()}!</div>
+        <div style="font-size:12px;color:var(--muted);">Cache: ${stats.size} entries (${stats.cached} cached, ${stats.translated} new, ${stats.failed} failed)</div>
+      `;
+      status.className = 'status-msg show ok';
     }
     this.renderStorySelector();
   }
 
+  // ======================= THEATER / PLAY =======================
   openTheater() {
-    if (!this.currentStory || !this.currentStory.lines || this.currentStory.lines.length === 0) return;
+    if (!this.currentStory || !this.currentStory.lines || this.currentStory.lines.length === 0) {
+      alert('Please select a story with lines first.');
+      return;
+    }
     const hasTranslation = this.currentStory.lines.some(l => l.translated);
     if (!hasTranslation) {
-      const go = confirm('🎭 Text is not yet translated to ' + this.lang.toUpperCase() + '.\n\nTheater will speak in the original language (Sanskrit/Hindi), which may not sound correct if your browser lacks Indic voices.\n\nClick OK to translate first, or Cancel to play original.');
+      const go = confirm('🎭 Text is not yet translated to ' + this.lang.toUpperCase() + '.\n\nTheater will speak in the original language, which may not sound correct if your browser lacks Indic voices.\n\nClick OK to translate first, or Cancel to play original.');
       if (go) { this.translateStory(); return; }
     }
     const script = { title: this.currentStory.title, lines: this.currentStory.lines };
@@ -1069,6 +1196,7 @@ class ChandamamaApp {
     window.theater.play();
   }
 
+  // ======================= SETTINGS =======================
   renderSettings() {
     const existing = document.getElementById('cmSettingsPanel');
     if (existing) return;
@@ -1076,33 +1204,32 @@ class ChandamamaApp {
     panel.id = 'cmSettingsPanel';
     panel.style.cssText = 'display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e1b4b;border:1px solid #4c1d95;border-radius:12px;padding:24px;max-width:420px;width:90%;z-index:10000;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.6);font-family:sans-serif;';
     panel.innerHTML = `
-      <h3 style="margin:0 0 16px;color:#c084fc;">⚙️ Translation Settings</h3>
-      <p style="font-size:12px;color:#a78bfa;margin:0 0 12px;">For 1,000+ lines, add a paid API key. Free providers rate-limit heavily.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;">⚙️ Translation Settings</h3>
+        <button onclick="document.getElementById('cmSettingsPanel').style.display='none';" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">For 1,000+ lines, add a paid API key. Free providers rate-limit heavily.</p>
       <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">Google Cloud API Key</label>
-        <input type="password" id="cmKeyGoogle" placeholder="AIza..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Google Cloud API Key</label>
+        <input id="cmKeyGoogle" type="password" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="AIza...">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">DeepL API Key</label>
-        <input type="password" id="cmKeyDeepL" placeholder="DeepL-Auth-Key ..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">DeepL API Key</label>
+        <input id="cmKeyDeepL" type="password" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="xxxxxxxx-xxxx...">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">Azure Translator Key</label>
-        <input type="password" id="cmKeyAzure" placeholder="..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:11px;color:#c4b5fd;margin-bottom:4px;">Azure Region (e.g. global, westus2)</label>
-        <input type="text" id="cmKeyAzureRegion" placeholder="global" style="width:100%;padding:8px;border-radius:6px;border:1px solid #4c1d95;background:#0f0a1e;color:#fff;font-size:13px;">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Azure Translator Key</label>
+        <input id="cmKeyAzure" type="password" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="xxxxxxxx...">
       </div>
       <div style="margin-bottom:16px;">
-        <div style="font-size:11px;color:#c4b5fd;margin-bottom:4px;">Provider Status</div>
-        <div id="cmProviderStatus" style="font-size:12px;color:#a78bfa;line-height:1.6;"></div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Azure Region (e.g. global, westus2)</label>
+        <input id="cmKeyAzureRegion" type="text" style="width:100%;padding:8px;background:#0f0f23;border:1px solid #4c1d95;border-radius:6px;color:#fff;font-family:inherit;" placeholder="global">
       </div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="app.saveSettings()" style="flex:1;padding:10px;background:#7c3aed;border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;">Save Keys</button>
-        <button onclick="app.clearCache()" style="padding:10px;background:#374151;border:none;border-radius:6px;color:#fff;cursor:pointer;">Clear Cache</button>
-        <button onclick="document.getElementById('cmSettingsPanel').style.display='none'" style="padding:10px;background:#374151;border:none;border-radius:6px;color:#fff;cursor:pointer;">Close</button>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button onclick="app.saveSettings()" style="flex:1;padding:10px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600;">Save</button>
+        <button onclick="app.clearCache()" style="padding:10px;background:rgba(239,68,68,0.2);border:1px solid var(--danger);border-radius:6px;color:var(--danger);cursor:pointer;font-weight:600;">Clear Cache</button>
       </div>
+      <div id="cmProviderStatus" style="font-size:12px;"></div>
     `;
     document.body.appendChild(panel);
     this.loadSettings();
@@ -1125,10 +1252,10 @@ class ChandamamaApp {
     const div = document.getElementById('cmProviderStatus');
     if (!div) return;
     const status = Translator.providerStatus;
-    div.innerHTML = status.map(s => {
+    div.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">Provider Status</div>' + status.map(s => {
       const color = s.available ? '#4ade80' : '#f87171';
       const note = s.circuitOpen ? ' (circuit open)' : '';
-      return `<div>● <span style="color:${color}">${s.name}</span>${note} — fails: ${s.failures}</div>`;
+      return `<div style="color:${color};margin:2px 0;">● ${s.name}${note} — fails: ${s.failures}</div>`;
     }).join('');
   }
 
@@ -1166,17 +1293,10 @@ class ChandamamaApp {
     alert('Translation cache cleared.');
   }
 
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
   clearTranslationCache() {
     Translator.clearCache();
     const status = document.getElementById('pdfStatus');
-    if (status) status.innerHTML = '<span style="color:#4ade80;">🗑 Translation cache cleared!</span>';
-    // Clear translated flags from all stories
+    if (status) { status.innerHTML = '🗑 Translation cache cleared!'; status.className = 'status-msg show ok'; }
     if (this.stories) {
       this.stories.forEach(s => {
         if (s.lines) s.lines.forEach(l => { l.translated = null; });
@@ -1185,6 +1305,8 @@ class ChandamamaApp {
     if (this.currentStory && this.currentStory.lines) {
       this.currentStory.lines.forEach(l => { l.translated = null; });
     }
+    this.renderStorySelector();
+    if (this.currentStory) this.showStoryEditor();
   }
 
   downloadScript() {

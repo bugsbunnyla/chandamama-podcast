@@ -17,15 +17,13 @@ class PDFAutoProcessor {
     this.updateStatus('📥 Loading PDF from URL...', 'info');
 
     try {
-      // Use PDF.js from CDN
       if (typeof pdfjsLib === 'undefined') {
         await this.loadPDFJS();
       }
 
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-      // Load the PDF (with CORS proxy if needed)
       const loadingTask = pdfjsLib.getDocument({
         url: url,
         useSystemFonts: true,
@@ -68,7 +66,6 @@ class PDFAutoProcessor {
         const pageText = textContent.items.map(item => item.str).join(' ');
         fullText += `\n--- PAGE ${i} ---\n${pageText}\n`;
 
-        // Update progress
         const pct = Math.round((i / this.pdfDoc.numPages) * 100);
         this.updateStatus(`🔍 Extracting... ${pct}% (${i}/${this.pdfDoc.numPages} pages)`, 'info');
       } catch (e) {
@@ -83,17 +80,11 @@ class PDFAutoProcessor {
 
   parseToStory() {
     if (!this.extractedText) return null;
-
     this.updateStatus('🎭 Parsing text into dramatized script...', 'info');
 
     const text = this.extractedText;
     const lines = text.split(/\n+/).filter(l => l.trim().length > 10);
-
-    // Heuristic: Detect story boundaries
-    // Look for patterns like "Page 1-3 = cover/story", "Page 4-8 = main story", etc.
     const pages = text.split(/--- PAGE \d+ ---/);
-
-    // Simple heuristic parser
     const story = this.heuristicParse(lines, pages);
 
     this.parsedStory = story;
@@ -102,19 +93,25 @@ class PDFAutoProcessor {
   }
 
   heuristicParse(lines, pages) {
-    // Detect language
     const hasDevanagari = /[\u0900-\u097F]/.test(this.extractedText);
     const hasTelugu = /[\u0C00-\u0C7F]/.test(this.extractedText);
-    const lang = hasDevanagari ? 'Sanskrit/Hindi' : (hasTelugu ? 'Telugu' : 'English');
+    const hasTamil = /[\u0B80-\u0BFF]/.test(this.extractedText);
+    const hasKannada = /[\u0C80-\u0CFF]/.test(this.extractedText);
+    const hasMalayalam = /[\u0D00-\u0D7F]/.test(this.extractedText);
+    const hasBengali = /[\u0980-\u09FF]/.test(this.extractedText);
 
-    // Split into chunks (potential scenes/episodes)
-    const chunks = this.splitIntoChunks(lines, 15); // ~15 lines per scene
+    let lang = 'English';
+    if (hasDevanagari) lang = 'Sanskrit/Hindi';
+    else if (hasTelugu) lang = 'Telugu';
+    else if (hasTamil) lang = 'Tamil';
+    else if (hasKannada) lang = 'Kannada';
+    else if (hasMalayalam) lang = 'Malayalam';
+    else if (hasBengali) lang = 'Bengali';
 
-    // Auto-detect characters from capitalized names or common patterns
+    const chunks = this.splitIntoChunks(lines, 15);
     const detectedChars = this.detectCharacters(lines);
 
-    // Build cast
-    const cast = detectedChars.length > 0 
+    const cast = detectedChars.length > 0
       ? detectedChars.map((name, i) => ({
           name: name,
           role: `Character ${i+1}`,
@@ -124,21 +121,20 @@ class PDFAutoProcessor {
             rate: 0.8 + (i * 0.05),
             pref: i % 2 === 0 ? 'male' : 'female'
           },
-          description: `Auto-detected character from PDF text`
+          description: 'Auto-detected character from PDF text'
         }))
       : [
-          { name: "Narrator", role: "Storyteller", emoji: "🌙", 
-            voice: {pitch: 1.0, rate: 0.85, pref: "male"},
-            description: "Auto-generated narrator" },
-          { name: "Character One", role: "Protagonist", emoji: "🤴",
-            voice: {pitch: 0.8, rate: 0.85, pref: "male"},
-            description: "Auto-generated character" },
-          { name: "Character Two", role: "Companion", emoji: "👸",
-            voice: {pitch: 1.15, rate: 0.9, pref: "female"},
-            description: "Auto-generated character" }
-        ];
+        { name: "Narrator", role: "Storyteller", emoji: "🌙",
+          voice: {pitch: 1.0, rate: 0.85, pref: "male"},
+          description: "Auto-generated narrator" },
+        { name: "Character One", role: "Protagonist", emoji: "🤴",
+          voice: {pitch: 0.8, rate: 0.85, pref: "male"},
+          description: "Auto-generated character" },
+        { name: "Character Two", role: "Companion", emoji: "👸",
+          voice: {pitch: 1.15, rate: 0.9, pref: "female"},
+          description: "Auto-generated character" }
+      ];
 
-    // Build scenes from chunks
     const scenes = chunks.map((chunk, i) => ({
       id: `scene${i+1}`,
       title: `Scene ${i+1}`,
@@ -153,22 +149,18 @@ class PDFAutoProcessor {
       ][i % 5]
     }));
 
-    // Build script from lines
     const script = [];
     let currentScene = 'scene1';
 
     lines.forEach((line, i) => {
-      // Detect scene changes
       if (line.includes('--- PAGE') && i > 0) {
         const pageNum = parseInt(line.match(/PAGE (\d+)/)?.[1] || '1');
         currentScene = `scene${Math.min(Math.ceil(pageNum / 2), scenes.length)}`;
       }
 
-      // Assign speaker heuristically
-      let speaker = cast[0].name; // Default narrator
+      let speaker = cast[0].name;
       let emotion = 'neutral';
 
-      // Check if line starts with a character name
       for (const c of cast) {
         if (line.toLowerCase().startsWith(c.name.toLowerCase()) ||
             line.includes(c.name + ':') ||
@@ -178,7 +170,6 @@ class PDFAutoProcessor {
         }
       }
 
-      // Detect emotion from keywords
       const lower = line.toLowerCase();
       if (lower.includes('!') && lower.includes('?')) emotion = 'confused';
       else if (lower.includes('!')) emotion = 'excited';
@@ -189,13 +180,12 @@ class PDFAutoProcessor {
 
       script.push({
         speaker: speaker,
-        text: line.trim().substring(0, 300), // Limit length
+        text: line.trim().substring(0, 300),
         emotion: emotion,
         scene: currentScene
       });
     });
 
-    // Create episode
     const episode = {
       id: 'auto-ep01',
       title: `Auto-Processed: ${lang} Story`,
@@ -247,7 +237,7 @@ class PDFAutoProcessor {
       });
     });
 
-    return Array.from(names).slice(0, 8); // Max 8 characters
+    return Array.from(names).slice(0, 8);
   }
 
   updateStatus(msg, type) {
@@ -274,5 +264,4 @@ class PDFAutoProcessor {
   }
 }
 
-// Global instance
 window.pdfProcessor = new PDFAutoProcessor();
