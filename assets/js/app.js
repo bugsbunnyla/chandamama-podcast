@@ -971,42 +971,6 @@ class ChandamamaApp {
         }
       });
     });
-
-    // Add test voice button after grid
-    let testBtn = document.getElementById('testVoiceBtn');
-    if (!testBtn) {
-      testBtn = document.createElement('button');
-      testBtn.id = 'testVoiceBtn';
-      testBtn.textContent = '🎤 Test Voice';
-      testBtn.style.cssText = 'margin-top:12px;padding:8px 16px;background:#059669;border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;';
-      testBtn.onclick = () => this.testVoice();
-      grid.parentNode.appendChild(testBtn);
-    }
-  }
-
-  async testVoice() {
-    await window.theater.ensureVoices();
-    const voice = window.theater.getVoiceForLang(this.lang);
-    const status = document.getElementById('pdfStatus');
-    if (!voice) {
-      if (status) { status.innerHTML = '❌ No voice found for ' + this.lang.toUpperCase() + '. Install it in Windows Settings → Speech.'; status.className = 'status-msg show err'; }
-      return;
-    }
-    const testText = this.lang === 'te' ? 'నమస్కారం' :
-      this.lang === 'hi' ? 'नमस्ते' :
-      this.lang === 'ta' ? 'வணக்கம்' :
-      this.lang === 'kn' ? 'ನಮಸ್ಕಾರ' :
-      this.lang === 'ml' ? 'നമസ്കാരം' :
-      this.lang === 'bn' ? 'নমস্কার' :
-      this.lang === 'sa' ? 'नमः' :
-      'Hello, this is a voice test.';
-    const utter = new SpeechSynthesisUtterance(testText);
-    utter.voice = voice;
-    utter.lang = voice.lang || 'en-US';
-    utter.rate = 0.9;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utter);
-    if (status) { status.innerHTML = '🔊 Testing voice: <strong>' + voice.name + '</strong> (' + voice.lang + ') for ' + this.lang.toUpperCase(); status.className = 'status-msg show ok'; }
   }
 
   setLanguage(code) {
