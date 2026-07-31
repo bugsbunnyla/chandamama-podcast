@@ -912,27 +912,62 @@ class Theater {
     return true;
   }
 
-  async playGoogleTTSChunk(text, ttsLang) {
-    const endpoints = [
-      `https://translate.google.com/translate_tts?ie=UTF-8&tl=${ttsLang}&client=tw-ob&q=${encodeURIComponent(text)}`,
-      `https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=${ttsLang}&client=tw-ob&q=${encodeURIComponent(text)}`
-    ];
-    for (const url of endpoints) {
-      try {
-        const audio = new Audio(url);
-        audio.crossOrigin = 'anonymous';
-        await new Promise((resolve, reject) => {
-          audio.onended = resolve;
-          audio.onerror = () => reject(new Error('Audio error'));
-          audio.onabort = () => reject(new Error('Audio abort'));
-          audio.play().catch(reject);
-        });
-        return true;
-      } catch (e) {
-        console.warn('[GoogleTTS] Endpoint failed:', e.message);
-      }
+async function playGoogleTTSChunk(text) {
+  // ===== FIXED: Use Web Speech API instead of dead Google TTS endpoint =====
+  if (!window.speechSynthesis) {
+    console.error('[TTS] Web Speech API not supported');
+    return;
+  }
+
+  // Cancel any ongoing speech
+  window.speechSynthesis.cancel();
+
+  // Split into chunks
+  const sentences = text.match(/[^।.!?]+[।.!?]+|[^।.!?]+$/g) || [text];
+  const chunks = [];
+  let current = '';
+  for (const s of sentences) {
+    const t = s.trim();
+    if ((current + t).length > 180 && current.length > 0) {
+      chunks.push(current.trim());
+      current = t;
+    } else {
+      current += (current ? ' ' : '') + t;
     }
-    return false;
+  }
+  if (current) chunks.push(current.trim());
+
+  // Load voices
+  let voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) {
+    await new Promise(r => {
+      window.speechSynthesis.onvoiceschanged = () => {
+        voices = window.speechSynthesis.getVoices();
+        r();
+      };
+      setTimeout(r, 1000);
+    });
+  }
+
+  // Pick best voice
+  let voice = voices.find(v => v.lang === 'te-IN') ||
+              voices.find(v => v.lang.startsWith('te')) ||
+              voices.find(v => v.lang.startsWith('hi')) ||
+              voices.find(v => !v.lang.startsWith('en')) ||
+              voices[0];
+
+  // Speak each chunk
+  for (const chunk of chunks) {
+    await new Promise((resolve) => {
+      const u = new SpeechSynthesisUtterance(chunk);
+      u.lang = 'te-IN';
+      u.rate = 0.9;
+      u.pitch = 1.0;
+      if (voice) u.voice = voice;
+      u.onend = resolve;
+      u.onerror = () => resolve(); // skip bad chunks
+      window.speechSynthesis.speak(u);
+    });
   }
 }
 
