@@ -565,55 +565,129 @@ class Theater {
     this.isPlaying = false;
     this.currentIndex = 0;
     this.voices = [];
-    this.loadVoices();
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = () => this.loadVoices();
-    }
+    this.voicesReady = false;
+    this.initVoices();
   }
 
-  loadVoices() {
-    this.voices = speechSynthesis.getVoices() || [];
+  async initVoices() {
+    // Edge/Chromium fix: voices may not load until after user interaction
+    // or until onvoiceschanged fires. We try multiple strategies.
+    return new Promise((resolve) => {
+      const tryLoad = () => {
+        const v = speechSynthesis.getVoices();
+        if (v && v.length > 0) {
+          this.voices = v;
+          this.voicesReady = true;
+          console.log('[Theater] Voices loaded:', v.length, 'voices');
+          v.forEach(vx => console.log('  -', vx.name, '(' + vx.lang + ')'));
+          resolve(v);
+          return true;
+        }
+        return false;
+      };
+
+      if (tryLoad()) return;
+
+      // Wait for onvoiceschanged
+      const handler = () => {
+        if (tryLoad()) {
+          speechSynthesis.removeEventListener('voiceschanged', handler);
+        }
+      };
+      speechSynthesis.addEventListener('voiceschanged', handler);
+
+      // Fallback: retry every 200ms for 3 seconds (Edge sometimes needs this)
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (tryLoad() || attempts > 15) {
+          clearInterval(interval);
+          if (!this.voicesReady) {
+            console.warn('[Theater] Voice loading timed out. Will retry on first play.');
+            resolve([]);
+          }
+        }
+      }, 200);
+
+      // Force initialization: Edge sometimes needs a dummy speak to wake up voices
+      try {
+        const dummy = new SpeechSynthesisUtterance('');
+        dummy.volume = 0;
+        speechSynthesis.speak(dummy);
+        speechSynthesis.cancel();
+      } catch(e) {}
+    });
+  }
+
+  async ensureVoices() {
+    if (!this.voicesReady || this.voices.length === 0) {
+      await this.initVoices();
+    }
+    // One more try after a brief delay (Edge quirk)
+    if (this.voices.length === 0) {
+      await sleep(300);
+      this.voices = speechSynthesis.getVoices() || [];
+    }
+    return this.voices;
   }
 
   getVoiceForLang(lang) {
-    this.loadVoices();
     const langCode = lang.toLowerCase();
+    const allVoices = this.voices;
 
-    let v = this.voices.find(vx => vx.lang.toLowerCase().startsWith(langCode));
+    if (!allVoices || allVoices.length === 0) {
+      console.warn('[Theater] No voices available yet');
+      return null;
+    }
+
+    // Strategy 1: Exact lang code match (e.g., te-IN, te)
+    let v = allVoices.find(vx => {
+      const vl = vx.lang.toLowerCase().replace(/_/g, '-');
+      return vl === langCode || vl.startsWith(langCode + '-');
+    });
     if (v) return v;
 
-    if (langCode === 'te') {
-      v = this.voices.find(vx => vx.lang.toLowerCase().includes('telugu') || vx.lang.toLowerCase().includes('te-'));
-      if (v) return v;
-      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('hi'));
-      if (v) return v;
-      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ta'));
+    // Strategy 2: Check voice name for language hints (Edge sometimes has lang="" but name contains language)
+    const nameHints = {
+      te: ['telugu', 'te ', 'te-'],
+      hi: ['hindi', 'hi ', 'hi-'],
+      ta: ['tamil', 'ta ', 'ta-'],
+      kn: ['kannada', 'kn ', 'kn-'],
+      ml: ['malayalam', 'ml ', 'ml-'],
+      bn: ['bengali', 'bn ', 'bn-'],
+      sa: ['sanskrit', 'sa ', 'sa-'],
+      en: ['english', 'en ', 'en-']
+    };
+    const hints = nameHints[langCode] || [langCode];
+    v = allVoices.find(vx => {
+      const name = vx.name.toLowerCase();
+      return hints.some(h => name.includes(h));
+    });
+    if (v) return v;
+
+    // Strategy 3: Fallback chain
+    const fallbacks = {
+      te: ['te', 'hi', 'ta', 'kn', 'ml', 'bn'],
+      hi: ['hi', 'sa', 'bn', 'ta', 'te'],
+      sa: ['sa', 'hi', 'bn'],
+      ta: ['ta', 'hi', 'te', 'ml'],
+      kn: ['kn', 'te', 'hi', 'ta'],
+      ml: ['ml', 'ta', 'hi', 'te'],
+      bn: ['bn', 'hi', 'te'],
+      en: ['en']
+    };
+    const chain = fallbacks[langCode] || [langCode];
+    for (const fb of chain) {
+      v = allVoices.find(vx => {
+        const vl = vx.lang.toLowerCase();
+        const name = vx.name.toLowerCase();
+        return vl.startsWith(fb) || name.includes(fb);
+      });
       if (v) return v;
     }
 
-    if (langCode === 'hi' || langCode === 'sa') {
-      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('hi'));
-      if (v) return v;
-    }
-    if (langCode === 'ta') {
-      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ta'));
-      if (v) return v;
-    }
-    if (langCode === 'kn') {
-      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('kn'));
-      if (v) return v;
-    }
-    if (langCode === 'ml') {
-      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('ml'));
-      if (v) return v;
-    }
-    if (langCode === 'bn') {
-      v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('bn'));
-      if (v) return v;
-    }
-
-    v = this.voices.find(vx => vx.lang.toLowerCase().startsWith('en'));
-    return v || this.voices[0] || null;
+    // Last resort: any voice
+    return allVoices[0] || null;
   }
 
   loadScript(script, lang) {
@@ -640,20 +714,24 @@ class Theater {
     this.isPlaying = true;
     this.currentIndex = 0;
 
-    const voice = this.getVoiceForLang(this.lang);
     const lines = this.script.lines;
     const langName = this.lang.toUpperCase();
 
+    // CRITICAL FIX: Ensure voices are loaded before checking availability
+    await this.ensureVoices();
+    const voice = this.getVoiceForLang(this.lang);
+
+    // More lenient detection: check both lang code AND voice name
     const hasNativeVoice = this.voices.some(vx => {
-      const lc = vx.lang.toLowerCase();
-      return lc.startsWith(this.lang.toLowerCase());
+      const lc = vx.lang.toLowerCase().replace(/_/g, '-');
+      const name = vx.name.toLowerCase();
+      const target = this.lang.toLowerCase();
+      return lc.startsWith(target) || name.includes(target);
     });
 
-    if (!hasNativeVoice && voice) {
-      console.warn('[Theater] No native ' + langName + ' voice found. Using fallback: ' + voice.name + ' (' + voice.lang + ').');
-    } else if (!voice) {
-      alert('No speech synthesis voice available for ' + langName + '. Your browser may not support this language. The story will be displayed as text only.');
-    }
+    // Can speak if we found ANY voice (even fallback) - let the browser try
+    const canSpeak = !!voice;
+    const isFallback = canSpeak && !hasNativeVoice;
 
     let overlay = document.getElementById('theaterOverlay');
     if (!overlay) {
@@ -669,10 +747,21 @@ class Theater {
         <div id="theaterEmoji" style="font-size:4rem;margin:20px 0;transition:all 0.4s;">🌙</div>
         <div id="theaterSpeaker" style="font-size:1.2rem;opacity:0.7;margin-bottom:10px;">Narrator</div>
         <div id="theaterLine" style="font-size:1.6rem;line-height:1.6;min-height:80px;transition:all 0.4s;"></div>
-        ${!hasNativeVoice ? `<p style="color:#fbbf24;margin-top:20px;">⚠️ No ${langName} voice installed. Using fallback voice. For best results, install a ${langName} TTS voice in your OS.</p>` : ''}
-        <button onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';" style="margin-top:30px;padding:12px 24px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:1rem;cursor:pointer;">⏹ Stop</button>
+        <div id="theaterNotice" style="margin-top:20px;min-height:24px;"></div>
+        <button onclick="window.theater.stop();document.getElementById('theaterOverlay').style.display='none';" style="margin-top:20px;padding:12px 24px;background:#7c3aed;border:none;border-radius:8px;color:#fff;font-size:1rem;cursor:pointer;">⏹ Stop</button>
       </div>
     `;
+
+    const noticeEl = document.getElementById('theaterNotice');
+    if (noticeEl) {
+      if (!canSpeak) {
+        noticeEl.innerHTML = `<p style="color:#fbbf24;">⚠️ No TTS voices found on this device. Theater will show text only with auto-advance.<br><span style="font-size:0.8rem;">Windows: Settings → Time &amp; Language → Speech → Add voices<br>Edge may need a page refresh after installing voices.</span></p>`;
+      } else if (isFallback) {
+        noticeEl.innerHTML = `<p style="color:#fbbf24;">⚠️ Using fallback voice: ${voice.name} (${voice.lang}).<br><span style="font-size:0.8rem;">For native ${langName} speech, install a ${langName} voice in Windows Settings → Speech.</span></p>`;
+      } else {
+        noticeEl.innerHTML = `<p style="color:var(--success);">🎤 Using voice: ${voice.name} (${voice.lang})</p>`;
+      }
+    }
 
     for (let i = 0; i < lines.length && this.isPlaying; i++) {
       this.currentIndex = i;
@@ -689,24 +778,53 @@ class Theater {
       if (speakerEl) { speakerEl.textContent = speaker; speakerEl.style.opacity = '1'; }
       if (lineEl) { lineEl.textContent = text; lineEl.style.opacity = '1'; lineEl.style.transform = 'translateY(0)'; }
 
-      if (text && voice) {
+      // Try to speak if we have any voice
+      if (text && canSpeak && voice) {
         const utter = new SpeechSynthesisUtterance(text);
         utter.voice = voice;
-        utter.lang = this.lang === 'te' ? 'te-IN' :
+        // Use the voice's own lang if available, otherwise map
+        utter.lang = voice.lang && voice.lang !== '' ? voice.lang :
+          this.lang === 'te' ? 'te-IN' :
           this.lang === 'hi' ? 'hi-IN' :
           this.lang === 'ta' ? 'ta-IN' :
           this.lang === 'kn' ? 'kn-IN' :
           this.lang === 'ml' ? 'ml-IN' :
           this.lang === 'bn' ? 'bn-IN' :
           this.lang === 'sa' ? 'sa-IN' :
-          this.lang === 'en' ? 'en-US' :
-          voice.lang;
+          this.lang === 'en' ? 'en-US' : 'en-US';
         utter.rate = 0.85;
         utter.pitch = vm.type === 'child' ? 1.3 : vm.type === 'demon' ? 0.7 : 1.0;
+        utter.volume = 1.0;
+
+        // Edge fix: ensure audio context is running
+        try {
+          if (window.AudioContext || window.webkitAudioContext) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (ctx.state === 'suspended') await ctx.resume();
+          }
+        } catch(e) {}
+
+        // Clear any stuck speech
+        speechSynthesis.cancel();
+
+        // Edge fix: speak may need to be called in a user gesture context
+        // We wrap in setTimeout to ensure we're not in an async microtask
+        await new Promise(r => setTimeout(r, 50));
+
         speechSynthesis.speak(utter);
-        await new Promise(r => { utter.onend = r; utter.onerror = r; });
+
+        await new Promise(r => {
+          let resolved = false;
+          const done = () => { if (!resolved) { resolved = true; r(); } };
+          utter.onend = done;
+          utter.onerror = (e) => { console.warn('[TTS] Error:', e.error); done(); };
+          // Safety timeout: if onend never fires, proceed after 15s
+          setTimeout(done, 15000);
+        });
       } else if (text) {
-        await sleep(3500);
+        // Text-only mode: auto-advance based on reading speed
+        const readTime = Math.max(2000, text.length * 80);
+        await sleep(readTime);
       } else {
         await sleep(500);
       }
@@ -719,6 +837,27 @@ class Theater {
     this.isPlaying = false;
     const lineEl = document.getElementById('theaterLine');
     if (lineEl) lineEl.textContent = '🎬 The End';
+  }
+
+  async speakWithGoogleTTS(text, lang) {
+    // Google Translate TTS hack for Indic languages
+    // Works for short text (<100 chars) on most browsers
+    if (!text || text.length > 150) return false;
+    try {
+      const q = encodeURIComponent(text);
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${q}`;
+      const audio = new Audio(url);
+      audio.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        audio.onended = resolve;
+        audio.onerror = reject;
+        audio.play().catch(reject);
+      });
+      return true;
+    } catch (e) {
+      console.warn('[GoogleTTS] Failed:', e.message);
+      return false;
+    }
   }
 }
 
@@ -832,6 +971,42 @@ class ChandamamaApp {
         }
       });
     });
+
+    // Add test voice button after grid
+    let testBtn = document.getElementById('testVoiceBtn');
+    if (!testBtn) {
+      testBtn = document.createElement('button');
+      testBtn.id = 'testVoiceBtn';
+      testBtn.textContent = '🎤 Test Voice';
+      testBtn.style.cssText = 'margin-top:12px;padding:8px 16px;background:#059669;border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;';
+      testBtn.onclick = () => this.testVoice();
+      grid.parentNode.appendChild(testBtn);
+    }
+  }
+
+  async testVoice() {
+    await window.theater.ensureVoices();
+    const voice = window.theater.getVoiceForLang(this.lang);
+    const status = document.getElementById('pdfStatus');
+    if (!voice) {
+      if (status) { status.innerHTML = '❌ No voice found for ' + this.lang.toUpperCase() + '. Install it in Windows Settings → Speech.'; status.className = 'status-msg show err'; }
+      return;
+    }
+    const testText = this.lang === 'te' ? 'నమస్కారం' :
+      this.lang === 'hi' ? 'नमस्ते' :
+      this.lang === 'ta' ? 'வணக்கம்' :
+      this.lang === 'kn' ? 'ನಮಸ್ಕಾರ' :
+      this.lang === 'ml' ? 'നമസ്കാരം' :
+      this.lang === 'bn' ? 'নমস্কার' :
+      this.lang === 'sa' ? 'नमः' :
+      'Hello, this is a voice test.';
+    const utter = new SpeechSynthesisUtterance(testText);
+    utter.voice = voice;
+    utter.lang = voice.lang || 'en-US';
+    utter.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+    if (status) { status.innerHTML = '🔊 Testing voice: <strong>' + voice.name + '</strong> (' + voice.lang + ') for ' + this.lang.toUpperCase(); status.className = 'status-msg show ok'; }
   }
 
   setLanguage(code) {
@@ -933,6 +1108,11 @@ class ChandamamaApp {
     const editor = document.getElementById('storyEditor');
     if (!editor || !this.currentStory) return;
     const sentences = this.currentStory.sentences || [];
+    // Preserve existing translations when rebuilding lines
+    const oldLines = this.currentStory.lines || [];
+    const oldTransMap = new Map();
+    oldLines.forEach(l => { if (l.translated) oldTransMap.set(l.original || l.text, l.translated); });
+
     const lines = sentences.map((text, i) => {
       let speaker = 'Narrator';
       let lineText = text;
@@ -945,7 +1125,8 @@ class ChandamamaApp {
       }
       const colonMatch = text.match(/^(\w+[\s\w]*)[:：]\s*(.+)/);
       if (colonMatch) { speaker = colonMatch[1].trim(); lineText = colonMatch[2].trim(); }
-      return { id: i, speaker, text: lineText, original: text };
+      const translated = oldTransMap.get(text) || null;
+      return { id: i, speaker, text: lineText, original: text, translated };
     }).filter(l => l.text.length > 3);
     this.currentStory.lines = lines;
 
@@ -971,7 +1152,7 @@ class ChandamamaApp {
           <div class="line-text">
             <input type="text" value="${this.escapeHtml(l.text)}" onchange="window.app.updateText(${i}, this.value)">
           </div>
-          ${l.translated ? `<div class="line-translated">${this.escapeHtml(l.translated)}</div>` : ''}
+          ${l.translated ? `<div class="line-translated">${this.escapeHtml(l.translated)}</div>` : '<div class="line-translated" style="color:#666;font-style:italic;">(not translated)</div>'}
         </div>
       `;
     }
@@ -1199,16 +1380,18 @@ class ChandamamaApp {
     this.renderStorySelector();
   }
 
-  openTheater() {
+  async openTheater() {
     if (!this.currentStory || !this.currentStory.lines || this.currentStory.lines.length === 0) {
       alert('Please select a story with lines first.');
       return;
     }
-    const hasTranslation = this.currentStory.lines.some(l => l.translated);
+    const hasTranslation = this.currentStory.lines.some(l => l.translated && l.translated.trim().length > 0);
     if (!hasTranslation) {
       const go = confirm('🎭 Text is not yet translated to ' + this.lang.toUpperCase() + '.\n\nTheater will speak in the original language, which may not sound correct if your browser lacks Indic voices.\n\nClick OK to translate first, or Cancel to play original.');
       if (go) { this.translateStory(); return; }
     }
+    // Pre-load voices before opening theater (Edge fix)
+    await window.theater.ensureVoices();
     const script = { title: this.currentStory.title, lines: this.currentStory.lines };
     window.theater.loadScript(script, this.lang);
     window.theater.open();
