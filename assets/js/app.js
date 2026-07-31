@@ -872,14 +872,18 @@ class Theater {
     // Chunk text at sentence boundaries
     const chunks = [];
     let current = '';
-    const sentences = text.split(/([।.!?
-])/);
-    for (const part of sentences) {
-      if ((current + part).length > 120) {
+    // Split on sentence endings: Devanagari danda, period, exclamation, question mark, newline
+    const sentenceEnds = /[।.!?
+]+/;
+    const parts = text.split(sentenceEnds);
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      if ((current + trimmed).length > 120) {
         if (current) chunks.push(current.trim());
-        current = part;
+        current = trimmed;
       } else {
-        current += part;
+        current = current ? current + ' ' + trimmed : trimmed;
       }
     }
     if (current.trim()) chunks.push(current.trim());
