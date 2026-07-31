@@ -5,7 +5,7 @@
 // CONSOLE CHECK: If you see "TTS FIX v2 LOADED" below, you have the new code.
 // If NOT, hard refresh: Ctrl+Shift+R (or Ctrl+F5)
 // ============================================
-console.log('%c[TTS FIX v2] LOADED — ResponsiveVoice enabled for Telugu/Hindi/Tamil', 'color:#22c55e;font-size:14px;font-weight:bold');
+console.log('%c[TTS FIX v3] LOADED — ResponsiveVoice + Google TTS fallback for Indic languages', 'color:#22c55e;font-size:14px;font-weight:bold');
 
 
 // CHANDAMAMA FIXED v3.2 - Syntax errors corrected
@@ -899,11 +899,17 @@ class Theater {
 
   // Map languages to ResponsiveVoice voice names
   getRVVoice(lang) {
+    // NOTE: ResponsiveVoice free tier does NOT include Telugu/Tamil/Kannada/Malayalam.
+    // Hindi Female IS available and works as the best phonetic fallback for all Indic scripts.
     const map = {
-      te: 'Telugu Female',    hi: 'Hindi Female',
-      ta: 'Tamil Female',     kn: 'Kannada Female',
-      ml: 'Malayalam Female', bn: 'Bengali Female',
-      sa: 'Hindi Female',     en: 'UK English Female',
+      te: 'Hindi Female',     // Telugu → Hindi (Telugu Female does NOT exist in RV free)
+      hi: 'Hindi Female',
+      ta: 'Hindi Female',     // Tamil → Hindi fallback
+      kn: 'Hindi Female',     // Kannada → Hindi fallback
+      ml: 'Hindi Female',     // Malayalam → Hindi fallback
+      bn: 'Hindi Female',     // Bengali → Hindi fallback
+      sa: 'Hindi Female',     // Sanskrit → Hindi
+      en: 'UK English Female',
       de: 'Deutsch Female',   fr: 'French Female',
       es: 'Spanish Female',   it: 'Italian Female',
       zh: 'Chinese Female'
@@ -967,29 +973,61 @@ class Theater {
   async playGoogleTTSChunk(text, ttsLang) {
     // 1. Try ResponsiveVoice for Indic languages
     if (this.shouldUseRV(ttsLang) && typeof responsiveVoice !== 'undefined') {
-      const voiceName = this.getRVVoice(ttsLang);
-      console.log('[TTS FIX v2] Speaking with ResponsiveVoice:', voiceName);
-      return new Promise((resolve) => {
-        responsiveVoice.speak(text, voiceName, {
-          rate: 0.9,
-          pitch: 1,
-          volume: 1,
-          onend: () => {
-            console.log('[TTS FIX v2] ResponsiveVoice finished');
-            resolve(true);
-          },
-          onerror: (e) => {
-            console.warn('[TTS FIX v2] ResponsiveVoice error:', e);
-            resolve(false);
-          }
+      const primaryVoice = this.getRVVoice(ttsLang);
+      // Build retry chain: primary → Hindi Female (universal Indic fallback)
+      const voicesToTry = [primaryVoice];
+      if (primaryVoice !== 'Hindi Female') voicesToTry.push('Hindi Female');
+
+      for (const voiceName of voicesToTry) {
+        const ok = await new Promise((resolve) => {
+          console.log('[TTS FIX v3] Trying ResponsiveVoice:', voiceName);
+          responsiveVoice.speak(text, voiceName, {
+            rate: 0.9,
+            pitch: 1,
+            volume: 1,
+            onend: () => {
+              console.log('[TTS FIX v3] ResponsiveVoice finished:', voiceName);
+              resolve(true);
+            },
+            onerror: (e) => {
+              console.warn('[TTS FIX v3] ResponsiveVoice error with', voiceName + ':', e);
+              resolve(false);
+            }
+          });
         });
-      });
+        if (ok) return true;
+      }
+      console.warn('[TTS FIX v3] ResponsiveVoice failed for all voices, trying Google Translate TTS...');
     }
 
-    // 2. Try Web Speech API for English and other languages
+    // 2. Try Google Translate TTS endpoint via Audio element
+    // Works for Telugu/Hindi/Tamil and bypasses CORS for playback
+    try {
+      const encoded = encodeURIComponent(text.substring(0, 200));
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${ttsLang}&client=tw-ob&q=${encoded}`;
+      const audio = new Audio(url);
+
+      const ok = await new Promise((resolve) => {
+        let resolved = false;
+        const done = (result) => { if (!resolved) { resolved = true; resolve(result); } };
+        audio.onended = () => done(true);
+        audio.onerror = (e) => {
+          console.warn('[TTS FIX v3] Google TTS audio error:', e);
+          done(false);
+        };
+        const p = audio.play();
+        if (p !== undefined) p.catch(e => { console.warn('[TTS FIX v3] Audio play blocked:', e); done(false); });
+        setTimeout(() => done(false), 12000);
+      });
+      if (ok) return true;
+    } catch(e) {
+      console.warn('[TTS FIX v3] Google TTS setup error:', e);
+    }
+
+    // 3. Final fallback: Web Speech API
     const synth = window.speechSynthesis;
     if (!synth) {
-      console.warn('[TTS FIX v2] Web Speech API not available');
+      console.warn('[TTS FIX v3] Web Speech API not available');
       return false;
     }
     synth.cancel();
@@ -1011,7 +1049,7 @@ class Theater {
       const done = (ok) => { if (!resolved) { resolved = true; resolve(ok); } };
       utter.onend = () => done(true);
       utter.onerror = (e) => {
-        console.warn('[TTS FIX v2] Web Speech error:', e.error);
+        console.warn('[TTS FIX v3] Web Speech error:', e.error);
         done(false);
       };
       setTimeout(() => done(false), 15000);

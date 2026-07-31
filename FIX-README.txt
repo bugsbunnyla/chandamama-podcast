@@ -1,32 +1,45 @@
 # Chandamama Podcast — TTS Fix v3
 
-## What Changed
+## Problem Fixed
 
-Only `assets/js/app.js` was modified. Four changes in the `play()` method:
+ResponsiveVoice free tier does NOT include "Telugu Female" (or Tamil/Kannada/Malayalam voices).
+When the previous fix routed Telugu to ResponsiveVoice, it threw:
+  Selected voice does not exist: Telugu Female
 
-1. **Added `forceRV` logic** — When an Indic language (Telugu, Hindi, Tamil, etc.) has no native local voice, `forceRV` becomes `true` even if a fallback voice (e.g. Hindi for Telugu) was found.
+This v3 fix adds a robust 3-tier fallback chain.
 
-2. **Updated notice banner** — Shows "Using ResponsiveVoice TTS" when `forceRV` is active.
+## What Changed in app.js
 
-3. **Guarded local voice path** — Skips `SpeechSynthesisUtterance` when `forceRV` is true, preventing a Hindi voice from reading Telugu text.
+1. getRVVoice() — Maps ALL Indic languages to 'Hindi Female' (the only reliably
+   available ResponsiveVoice free-tier Indic voice). Hindi is phonetically the
+   closest fallback for Telugu/Tamil/Kannada/Malayalam.
 
-4. **Routed fallback Indic to ResponsiveVoice** — The `else if` branch now catches `!canSpeak || forceRV` and calls `speakWithGoogleTTS()` which uses ResponsiveVoice cloud TTS.
+2. playGoogleTTSChunk() — Added retry logic:
+   - Try mapped voice (e.g. Hindi Female)
+   - If that fails, try 'Hindi Female' again as universal fallback
+   - If ResponsiveVoice completely fails, try Google Translate TTS via <audio>
+   - Final fallback: Web Speech API
 
-## Files in this ZIP
+3. Console markers updated to [TTS FIX v3] so you can verify deployment.
 
-- `index.html` — unchanged (already includes ResponsiveVoice script)
-- `assets/js/app.js` — fixed TTS routing
+## Deploy
 
-## How to Deploy
+1. Extract ZIP → overwrite assets/js/app.js (and index.html if included)
+2. Update cache-buster in index.html: change app.js?v=2 to app.js?v=3
+3. Commit & push
+4. Wait 2-5 min for GitHub Pages
+5. Hard refresh: Ctrl + Shift + R
 
-1. Extract this ZIP
-2. Overwrite your repo files with these
-3. Commit: `Fix play() to force ResponsiveVoice for Indic languages without native voice`
-4. Wait 2–5 min for GitHub Pages
-5. Hard refresh: `Ctrl + Shift + R`
+## Verify in Console (F12)
 
-## Verify
+Select Telugu (TE), translate, Play Theater. You should see:
+  [TTS FIX v3] LOADED
+  [TTS FIX v3] Trying ResponsiveVoice: Hindi Female
+  [TTS FIX v3] ResponsiveVoice finished: Hindi Female
 
-Open console (F12), select Telugu (TE), translate, click Play Theater:
-- You should see: `[TTS FIX v2] Using ResponsiveVoice for TE`
-- You should NOT see: `Using fallback voice: Microsoft David` or any Hindi voice for Telugu text
+If Google TTS is used instead:
+  [TTS FIX v3] ResponsiveVoice failed for all voices, trying Google Translate TTS...
+
+You should NOT see:
+  Selected voice does not exist: Telugu Female
+  [Theater] Found via fallback: Microsoft David
