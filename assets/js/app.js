@@ -640,14 +640,16 @@ class Theater {
       return null;
     }
 
+    console.log('[Theater] Looking for voice for lang:', langCode, 'among', allVoices.length, 'voices');
+
     // Strategy 1: Exact lang code match (e.g., te-IN, te)
     let v = allVoices.find(vx => {
       const vl = vx.lang.toLowerCase().replace(/_/g, '-');
       return vl === langCode || vl.startsWith(langCode + '-');
     });
-    if (v) return v;
+    if (v) { console.log('[Theater] Found exact match:', v.name, v.lang); return v; }
 
-    // Strategy 2: Check voice name for language hints (Edge sometimes has lang="" but name contains language)
+    // Strategy 2: Check voice name for language hints
     const nameHints = {
       te: ['telugu', 'te ', 'te-'],
       hi: ['hindi', 'hi ', 'hi-'],
@@ -663,9 +665,9 @@ class Theater {
       const name = vx.name.toLowerCase();
       return hints.some(h => name.includes(h));
     });
-    if (v) return v;
+    if (v) { console.log('[Theater] Found by name hint:', v.name, v.lang); return v; }
 
-    // Strategy 3: Fallback chain
+    // Strategy 3: Fallback chain (only among related Indic languages, NEVER English for Indic)
     const fallbacks = {
       te: ['te', 'hi', 'ta', 'kn', 'ml', 'bn'],
       hi: ['hi', 'sa', 'bn', 'ta', 'te'],
@@ -683,10 +685,18 @@ class Theater {
         const name = vx.name.toLowerCase();
         return vl.startsWith(fb) || name.includes(fb);
       });
-      if (v) return v;
+      if (v) { console.log('[Theater] Found via fallback:', v.name, v.lang); return v; }
     }
 
-    // Last resort: any voice
+    // CRITICAL FIX: For non-English languages, do NOT return English voice
+    // English voice reading Telugu = garbled "asterisk two" sounds
+    if (langCode !== 'en') {
+      console.warn('[Theater] No local voice found for', langCode, '- will use Google TTS');
+      return null; // Signal to use web TTS instead
+    }
+
+    // Only for English: return any available voice
+    console.log('[Theater] Using default voice for English:', allVoices[0]?.name);
     return allVoices[0] || null;
   }
 
@@ -755,11 +765,11 @@ class Theater {
     const noticeEl = document.getElementById('theaterNotice');
     if (noticeEl) {
       if (!canSpeak) {
-        noticeEl.innerHTML = `<p style="color:#fbbf24;">⚠️ No TTS voices found on this device. Theater will show text only with auto-advance.<br><span style="font-size:0.8rem;">Windows: Settings → Time &amp; Language → Speech → Add voices<br>Edge may need a page refresh after installing voices.</span></p>`;
+        noticeEl.innerHTML = `<p style="color:#fbbf24;">🌐 Using Google Translate TTS for ${langName}.<br><span style="font-size:0.8rem;">No local ${langName} voice found. Using web-based speech instead.</span></p>`;
       } else if (isFallback) {
         noticeEl.innerHTML = `<p style="color:#fbbf24;">⚠️ Using fallback voice: ${voice.name} (${voice.lang}).<br><span style="font-size:0.8rem;">For native ${langName} speech, install a ${langName} voice in Windows Settings → Speech.</span></p>`;
       } else {
-        noticeEl.innerHTML = `<p style="color:var(--success);">🎤 Using voice: ${voice.name} (${voice.lang})</p>`;
+        noticeEl.innerHTML = `<p style="color:var(--success);">🎤 Using local voice: ${voice.name} (${voice.lang})</p>`;
       }
     }
 
@@ -778,11 +788,11 @@ class Theater {
       if (speakerEl) { speakerEl.textContent = speaker; speakerEl.style.opacity = '1'; }
       if (lineEl) { lineEl.textContent = text; lineEl.style.opacity = '1'; lineEl.style.transform = 'translateY(0)'; }
 
-      // Try to speak if we have any voice
+      // Try to speak
       if (text && canSpeak && voice) {
+        // LOCAL VOICE PATH: we found a matching local voice
         const utter = new SpeechSynthesisUtterance(text);
         utter.voice = voice;
-        // Use the voice's own lang if available, otherwise map
         utter.lang = voice.lang && voice.lang !== '' ? voice.lang :
           this.lang === 'te' ? 'te-IN' :
           this.lang === 'hi' ? 'hi-IN' :
@@ -796,7 +806,6 @@ class Theater {
         utter.pitch = vm.type === 'child' ? 1.3 : vm.type === 'demon' ? 0.7 : 1.0;
         utter.volume = 1.0;
 
-        // Edge fix: ensure audio context is running
         try {
           if (window.AudioContext || window.webkitAudioContext) {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -804,13 +813,8 @@ class Theater {
           }
         } catch(e) {}
 
-        // Clear any stuck speech
         speechSynthesis.cancel();
-
-        // Edge fix: speak may need to be called in a user gesture context
-        // We wrap in setTimeout to ensure we're not in an async microtask
         await new Promise(r => setTimeout(r, 50));
-
         speechSynthesis.speak(utter);
 
         await new Promise(r => {
@@ -818,11 +822,18 @@ class Theater {
           const done = () => { if (!resolved) { resolved = true; r(); } };
           utter.onend = done;
           utter.onerror = (e) => { console.warn('[TTS] Error:', e.error); done(); };
-          // Safety timeout: if onend never fires, proceed after 15s
           setTimeout(done, 15000);
         });
+      } else if (text && !canSpeak) {
+        // GOOGLE TTS PATH: no local voice found - use Google Translate TTS for EVERY line
+        const spoken = await this.speakWithGoogleTTS(text, this.lang);
+        if (!spoken) {
+          // If Google TTS fails, show text with reading time
+          const readTime = Math.max(2500, text.length * 90);
+          await sleep(readTime);
+        }
       } else if (text) {
-        // Text-only mode: auto-advance based on reading speed
+        // Fallback: text-only mode
         const readTime = Math.max(2000, text.length * 80);
         await sleep(readTime);
       } else {
@@ -840,24 +851,61 @@ class Theater {
   }
 
   async speakWithGoogleTTS(text, lang) {
-    // Google Translate TTS hack for Indic languages
-    // Works for short text (<100 chars) on most browsers
-    if (!text || text.length > 150) return false;
-    try {
-      const q = encodeURIComponent(text);
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${q}`;
-      const audio = new Audio(url);
-      audio.crossOrigin = 'anonymous';
-      await new Promise((resolve, reject) => {
-        audio.onended = resolve;
-        audio.onerror = reject;
-        audio.play().catch(reject);
-      });
-      return true;
-    } catch (e) {
-      console.warn('[GoogleTTS] Failed:', e.message);
-      return false;
+    // Google Translate TTS for Indic languages when no local voice exists
+    // Chunks text into ~100 char segments to stay under URL limits
+    if (!text) return false;
+
+    // Chunk text at sentence boundaries
+    const chunks = [];
+    let current = '';
+    const sentences = text.split(/([।.!?
+])/);
+    for (const part of sentences) {
+      if ((current + part).length > 120) {
+        if (current) chunks.push(current.trim());
+        current = part;
+      } else {
+        current += part;
+      }
     }
+    if (current.trim()) chunks.push(current.trim());
+    if (chunks.length === 0) chunks.push(text.substring(0, 120));
+
+    const langMap = {
+      te: 'te', hi: 'hi', ta: 'ta', kn: 'kn', ml: 'ml',
+      bn: 'bn', sa: 'hi', en: 'en'
+    };
+    const ttsLang = langMap[lang] || lang;
+
+    for (const chunk of chunks) {
+      if (!chunk) continue;
+      const spoken = await this.playGoogleTTSChunk(chunk, ttsLang);
+      if (!spoken) return false;
+    }
+    return true;
+  }
+
+  async playGoogleTTSChunk(text, ttsLang) {
+    const endpoints = [
+      `https://translate.google.com/translate_tts?ie=UTF-8&tl=${ttsLang}&client=tw-ob&q=${encodeURIComponent(text)}`,
+      `https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=${ttsLang}&client=tw-ob&q=${encodeURIComponent(text)}`
+    ];
+    for (const url of endpoints) {
+      try {
+        const audio = new Audio(url);
+        audio.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+          audio.onended = resolve;
+          audio.onerror = () => reject(new Error('Audio error'));
+          audio.onabort = () => reject(new Error('Audio abort'));
+          audio.play().catch(reject);
+        });
+        return true;
+      } catch (e) {
+        console.warn('[GoogleTTS] Endpoint failed:', e.message);
+      }
+    }
+    return false;
   }
 }
 
