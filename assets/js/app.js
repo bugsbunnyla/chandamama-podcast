@@ -668,22 +668,23 @@ class Theater {
     if (v) { console.log('[Theater] Found by name hint:', v.name, v.lang); return v; }
 
     // Strategy 3: Fallback chain (only among related Indic languages, NEVER English for Indic)
-    const fallbacks = {
-      te: ['te', 'hi', 'ta', 'kn', 'ml', 'bn'],
-      hi: ['hi', 'sa', 'bn', 'ta', 'te'],
-      sa: ['sa', 'hi', 'bn'],
-      ta: ['ta', 'hi', 'te', 'ml'],
-      kn: ['kn', 'te', 'hi', 'ta'],
-      ml: ['ml', 'ta', 'hi', 'te'],
-      bn: ['bn', 'hi', 'te'],
-      en: ['en']
+    // Use word-boundary hints to avoid matching "States" for "te"
+    const fallbackHints = {
+      te: ['te ', 'te-', 'te_', 'telugu'],
+      hi: ['hi ', 'hi-', 'hi_', 'hindi'],
+      sa: ['sa ', 'sa-', 'sa_', 'sanskrit'],
+      ta: ['ta ', 'ta-', 'ta_', 'tamil'],
+      kn: ['kn ', 'kn-', 'kn_', 'kannada'],
+      ml: ['ml ', 'ml-', 'ml_', 'malayalam'],
+      bn: ['bn ', 'bn-', 'bn_', 'bengali'],
+      en: ['en ', 'en-', 'en_', 'english']
     };
-    const chain = fallbacks[langCode] || [langCode];
-    for (const fb of chain) {
+    const fbHints = fallbackHints[langCode] || [langCode + ' '];
+    for (const h of fbHints) {
       v = allVoices.find(vx => {
-        const vl = vx.lang.toLowerCase();
+        const vl = vx.lang.toLowerCase().replace(/_/g, '-');
         const name = vx.name.toLowerCase();
-        return vl.startsWith(fb) || name.includes(fb);
+        return vl.startsWith(h.trim()) || name.includes(h);
       });
       if (v) { console.log('[Theater] Found via fallback:', v.name, v.lang); return v; }
     }
@@ -749,8 +750,16 @@ class Theater {
       const target = this.lang.toLowerCase();
       // Exact lang code match
       if (lc === target || lc.startsWith(target + '-')) return true;
-      // Name hint match (with word boundary via space/dash/underscore)
-      return hints.some(h => name.includes(h));
+      // Name hint match (with word boundary - must be followed by space, dash, underscore, or end of string)
+      return hints.some(h => {
+        const idx = name.indexOf(h);
+        if (idx === -1) return false;
+        // Check that the character AFTER the hint is a word boundary
+        const after = idx + h.length;
+        if (after >= name.length) return true; // hint at end of name
+        const nextChar = name[after];
+        return nextChar === ' ' || nextChar === '-' || nextChar === '_' || nextChar === '(';
+      });
     });
 
     // Can speak if we found ANY voice (even fallback) - let the browser try
