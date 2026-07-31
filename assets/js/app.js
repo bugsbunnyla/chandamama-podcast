@@ -864,15 +864,61 @@ class Theater {
     if (lineEl) lineEl.textContent = '🎬 The End';
   }
 
+  // ===== VOICE DETECTION =====
+  getVoiceStatus() {
+    const synth = window.speechSynthesis;
+    if (!synth) return { available: false, voices: [], hasTelugu: false, hasHindi: false };
+    const voices = synth.getVoices();
+    return {
+      available: true,
+      voices: voices.map(v => ({ lang: v.lang, name: v.name })),
+      hasTelugu: voices.some(v => v.lang && (v.lang === 'te-IN' || v.lang.startsWith('te'))),
+      hasHindi: voices.some(v => v.lang && (v.lang === 'hi-IN' || v.lang.startsWith('hi'))),
+      hasEnglish: voices.some(v => v.lang && v.lang.startsWith('en'))
+    };
+  }
+
+  showTTSToast(message, type = 'warning') {
+    let toast = document.getElementById('tts-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'tts-toast';
+      toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);' +
+        'padding:14px 28px;border-radius:10px;font-family:Nunito,sans-serif;font-size:14px;' +
+        'z-index:99999;max-width:90%;text-align:center;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);' +
+        'transition:opacity 0.3s;line-height:1.5;';
+      document.body.appendChild(toast);
+    }
+    const colors = { warning: '#f59e0b', error: '#ef4444', success: '#22c55e', info: '#3b82f6' };
+    toast.style.background = colors[type] || colors.warning;
+    toast.style.color = '#fff';
+    toast.innerHTML = message;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.style.display = 'none', 300);
+    }, 8000);
+  }
+
+  // ===== TEXT HASH FOR MP3 LOOKUP =====
+  textHash(text) {
+    let h = 0;
+    for (let i = 0; i < text.length; i++) {
+      h = ((h << 5) - h) + text.charCodeAt(i);
+      h = h & h;
+    }
+    return Math.abs(h).toString(16).substring(0, 12);
+  }
+
   async speakWithGoogleTTS(text, lang) {
-    // FIXED: Uses Web Speech API instead of dead Google Translate TTS endpoint
+    // FIXED: Hybrid TTS — MP3 first, then Web Speech, then text-only
     if (!text) return false;
 
-    // Chunk text at sentence boundaries
     const chunks = [];
     let current = '';
     const sentenceEnds = new RegExp('[\u0964.!?\n]+');
-
     const parts = text.split(sentenceEnds);
     for (const part of parts) {
       const trimmed = part.trim();
@@ -887,11 +933,21 @@ class Theater {
     if (current.trim()) chunks.push(current.trim());
     if (chunks.length === 0) chunks.push(text.substring(0, 120));
 
-    const langMap = {
-      te: 'te', hi: 'hi', ta: 'ta', kn: 'kn', ml: 'ml',
-      bn: 'bn', sa: 'hi', en: 'en'
-    };
+    const langMap = { te: 'te', hi: 'hi', ta: 'ta', kn: 'kn', ml: 'ml', bn: 'bn', sa: 'hi', en: 'en' };
     const ttsLang = langMap[lang] || lang;
+
+    // Check voice availability once per session
+    if (!this._voiceChecked) {
+      this._voiceChecked = true;
+      const status = this.getVoiceStatus();
+      if (!status.hasTelugu && ttsLang === 'te') {
+        this.showTTSToast(
+          '⚠️ Telugu voice not found on this device.<br>' +
+          '<b>For clear audio:</b> Use the <i>Generate Audio</i> button below, or install Telugu in Windows Settings → Time & Language → Language & Region → Add Telugu → Enable Text-to-speech.',
+          'warning'
+        );
+      }
+    }
 
     for (const chunk of chunks) {
       if (!chunk) continue;
@@ -902,7 +958,22 @@ class Theater {
   }
 
   async playGoogleTTSChunk(text, ttsLang) {
-    // FIXED: Web Speech API — no external fetch, no CORS, no 404
+    // 1. Try pre-generated MP3 (hash-based filename)
+    const hash = this.textHash(text);
+    const mp3Url = `audio/${ttsLang}/${hash}.mp3`;
+    try {
+      const audio = new Audio(mp3Url);
+      await new Promise((resolve, reject) => {
+        audio.onended = resolve;
+        audio.onerror = reject;
+        audio.play().catch(reject);
+      });
+      return true;
+    } catch (e) {
+      // MP3 not found or failed, continue to Web Speech
+    }
+
+    // 2. Try Web Speech API
     const synth = window.speechSynthesis;
     if (!synth) {
       console.warn('[TTS] Web Speech API not available');
