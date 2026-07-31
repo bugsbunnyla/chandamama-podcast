@@ -732,11 +732,25 @@ class Theater {
     const voice = this.getVoiceForLang(this.lang);
 
     // More lenient detection: check both lang code AND voice name
+    const nameHints = {
+      te: ['telugu', 'te ', 'te-', 'te_'],
+      hi: ['hindi', 'hi ', 'hi-', 'hi_'],
+      ta: ['tamil', 'ta ', 'ta-', 'ta_'],
+      kn: ['kannada', 'kn ', 'kn-', 'kn_'],
+      ml: ['malayalam', 'ml ', 'ml-', 'ml_'],
+      bn: ['bengali', 'bn ', 'bn-', 'bn_'],
+      sa: ['sanskrit', 'sa ', 'sa-', 'sa_'],
+      en: ['english', 'en ', 'en-', 'en_']
+    };
+    const hints = nameHints[this.lang.toLowerCase()] || [this.lang.toLowerCase() + ' '];
     const hasNativeVoice = this.voices.some(vx => {
       const lc = vx.lang.toLowerCase().replace(/_/g, '-');
       const name = vx.name.toLowerCase();
       const target = this.lang.toLowerCase();
-      return lc.startsWith(target) || name.includes(target);
+      // Exact lang code match
+      if (lc === target || lc.startsWith(target + '-')) return true;
+      // Name hint match (with word boundary via space/dash/underscore)
+      return hints.some(h => name.includes(h));
     });
 
     // Can speak if we found ANY voice (even fallback) - let the browser try
