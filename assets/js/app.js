@@ -864,7 +864,10 @@ class Theater {
     if (lineEl) lineEl.textContent = '🎬 The End';
   }
 
-  // ===== VOICE DETECTION =====
+  // ===== RESPONSIVEVOICE TTS FIX =====
+  // Uses cloud TTS for Indic languages (no local voice needed)
+  // Falls back to Web Speech API for English, French, German, etc.
+
   getVoiceStatus() {
     const synth = window.speechSynthesis;
     if (!synth) return { available: false, voices: [], hasTelugu: false, hasHindi: false };
@@ -902,18 +905,27 @@ class Theater {
     }, 8000);
   }
 
-  // ===== TEXT HASH FOR MP3 LOOKUP =====
-  textHash(text) {
-    let h = 0;
-    for (let i = 0; i < text.length; i++) {
-      h = ((h << 5) - h) + text.charCodeAt(i);
-      h = h & h;
-    }
-    return Math.abs(h).toString(16).substring(0, 12);
+  // Map languages to ResponsiveVoice voice names
+  getRVVoice(lang) {
+    const map = {
+      te: 'Telugu Female',    hi: 'Hindi Female',
+      ta: 'Tamil Female',     kn: 'Kannada Female',
+      ml: 'Malayalam Female', bn: 'Bengali Female',
+      sa: 'Hindi Female',     en: 'UK English Female',
+      de: 'Deutsch Female',   fr: 'French Female',
+      es: 'Spanish Female',   it: 'Italian Female',
+      zh: 'Chinese Female'
+    };
+    return map[lang] || map['en'];
+  }
+
+  // Languages that should use ResponsiveVoice (no good local voices on Windows)
+  shouldUseRV(lang) {
+    return ['te', 'hi', 'ta', 'kn', 'ml', 'bn', 'sa'].includes(lang);
   }
 
   async speakWithGoogleTTS(text, lang) {
-    // FIXED: Hybrid TTS — MP3 first, then Web Speech, then text-only
+    // FIXED: Hybrid TTS — ResponsiveVoice for Indic, Web Speech for others
     if (!text) return false;
 
     const chunks = [];
@@ -935,15 +947,17 @@ class Theater {
 
     const langMap = { te: 'te', hi: 'hi', ta: 'ta', kn: 'kn', ml: 'ml', bn: 'bn', sa: 'hi', en: 'en' };
     const ttsLang = langMap[lang] || lang;
+    const useRV = this.shouldUseRV(ttsLang);
 
-    // Check voice availability once per session
+    // Show notice on first play
     if (!this._voiceChecked) {
       this._voiceChecked = true;
-      const status = this.getVoiceStatus();
-      if (!status.hasTelugu && ttsLang === 'te') {
+      if (useRV && typeof responsiveVoice !== 'undefined') {
+        console.log('[TTS] Using ResponsiveVoice for', ttsLang);
+      } else if (useRV) {
         this.showTTSToast(
-          '⚠️ Telugu voice not found on this device.<br>' +
-          '<b>For clear audio:</b> Use the <i>Generate Audio</i> button below, or install Telugu in Windows Settings → Time & Language → Language & Region → Add Telugu → Enable Text-to-speech.',
+          '⚠️ ResponsiveVoice not loaded yet. Please wait a moment and try again.<br>' +
+          'If the issue persists, refresh the page.',
           'warning'
         );
       }
@@ -958,22 +972,24 @@ class Theater {
   }
 
   async playGoogleTTSChunk(text, ttsLang) {
-    // 1. Try pre-generated MP3 (hash-based filename)
-    const hash = this.textHash(text);
-    const mp3Url = `audio/${ttsLang}/${hash}.mp3`;
-    try {
-      const audio = new Audio(mp3Url);
-      await new Promise((resolve, reject) => {
-        audio.onended = resolve;
-        audio.onerror = reject;
-        audio.play().catch(reject);
+    // 1. Try ResponsiveVoice for Indic languages
+    if (this.shouldUseRV(ttsLang) && typeof responsiveVoice !== 'undefined') {
+      const voiceName = this.getRVVoice(ttsLang);
+      return new Promise((resolve) => {
+        responsiveVoice.speak(text, voiceName, {
+          rate: 0.9,
+          pitch: 1,
+          volume: 1,
+          onend: () => resolve(true),
+          onerror: (e) => {
+            console.warn('[TTS] ResponsiveVoice error:', e);
+            resolve(false);
+          }
+        });
       });
-      return true;
-    } catch (e) {
-      // MP3 not found or failed, continue to Web Speech
     }
 
-    // 2. Try Web Speech API
+    // 2. Try Web Speech API for English and other languages
     const synth = window.speechSynthesis;
     if (!synth) {
       console.warn('[TTS] Web Speech API not available');
@@ -982,16 +998,14 @@ class Theater {
     synth.cancel();
 
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = ttsLang === 'te' ? 'te-IN' : (ttsLang === 'hi' ? 'hi-IN' : (ttsLang === 'ta' ? 'ta-IN' : 'en-US'));
+    utter.lang = ttsLang === 'en' ? 'en-US' : (ttsLang === 'de' ? 'de-DE' : (ttsLang === 'fr' ? 'fr-FR' : 'en-US'));
     utter.rate = 0.9;
     utter.pitch = 1.0;
     utter.volume = 1.0;
 
     const voices = synth.getVoices();
-    const voice = voices.find(v => v.lang === 'te-IN') ||
-                  voices.find(v => v.lang && v.lang.startsWith('te')) ||
-                  voices.find(v => v.lang && v.lang.startsWith('hi')) ||
-                  voices.find(v => v.lang && !v.lang.startsWith('en')) ||
+    const voice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(ttsLang)) ||
+                  voices.find(v => v.lang && v.lang.startsWith('en')) ||
                   voices[0];
     if (voice) utter.voice = voice;
 
