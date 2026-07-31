@@ -873,8 +873,7 @@ class Theater {
     const chunks = [];
     let current = '';
     // Split on sentence endings: Devanagari danda, period, exclamation, question mark, newline
-    const sentenceEnds = /[।.!?
-]+/;
+    const sentenceEnds = new RegExp('[\\u0964.!?\\n]+');
     const parts = text.split(sentenceEnds);
     for (const part of parts) {
       const trimmed = part.trim();
