@@ -1,3 +1,13 @@
+// ============================================
+// CHANDAMAMA PODCAST — app.js
+// TTS FIX v2: ResponsiveVoice for Indic languages
+// ============================================
+// CONSOLE CHECK: If you see "TTS FIX v2 LOADED" below, you have the new code.
+// If NOT, hard refresh: Ctrl+Shift+R (or Ctrl+F5)
+// ============================================
+console.log('%c[TTS FIX v2] LOADED — ResponsiveVoice enabled for Telugu/Hindi/Tamil', 'color:#22c55e;font-size:14px;font-weight:bold');
+
+
 // CHANDAMAMA FIXED v3.2 - Syntax errors corrected
 // Load this file locally, NOT from GitHub
 console.log('[Chandamama] Fixed v3.2 app.js loaded');
@@ -864,8 +874,8 @@ class Theater {
     if (lineEl) lineEl.textContent = '🎬 The End';
   }
 
-  // ===== RESPONSIVEVOICE TTS FIX =====
-  // Uses cloud TTS for Indic languages (no local voice needed)
+  // ===== RESPONSIVEVOICE TTS FIX v2 =====
+  // Uses cloud TTS for Indic languages (Telugu, Hindi, Tamil, etc.)
   // Falls back to Web Speech API for English, French, German, etc.
 
   getVoiceStatus() {
@@ -879,30 +889,6 @@ class Theater {
       hasHindi: voices.some(v => v.lang && (v.lang === 'hi-IN' || v.lang.startsWith('hi'))),
       hasEnglish: voices.some(v => v.lang && v.lang.startsWith('en'))
     };
-  }
-
-  showTTSToast(message, type = 'warning') {
-    let toast = document.getElementById('tts-toast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'tts-toast';
-      toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);' +
-        'padding:14px 28px;border-radius:10px;font-family:Nunito,sans-serif;font-size:14px;' +
-        'z-index:99999;max-width:90%;text-align:center;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);' +
-        'transition:opacity 0.3s;line-height:1.5;';
-      document.body.appendChild(toast);
-    }
-    const colors = { warning: '#f59e0b', error: '#ef4444', success: '#22c55e', info: '#3b82f6' };
-    toast.style.background = colors[type] || colors.warning;
-    toast.style.color = '#fff';
-    toast.innerHTML = message;
-    toast.style.display = 'block';
-    toast.style.opacity = '1';
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.style.display = 'none', 300);
-    }, 8000);
   }
 
   // Map languages to ResponsiveVoice voice names
@@ -925,7 +911,7 @@ class Theater {
   }
 
   async speakWithGoogleTTS(text, lang) {
-    // FIXED: Hybrid TTS — ResponsiveVoice for Indic, Web Speech for others
+    // FIXED v2: Hybrid TTS — ResponsiveVoice for Indic, Web Speech for others
     if (!text) return false;
 
     const chunks = [];
@@ -952,14 +938,15 @@ class Theater {
     // Show notice on first play
     if (!this._voiceChecked) {
       this._voiceChecked = true;
-      if (useRV && typeof responsiveVoice !== 'undefined') {
-        console.log('[TTS] Using ResponsiveVoice for', ttsLang);
-      } else if (useRV) {
-        this.showTTSToast(
-          '⚠️ ResponsiveVoice not loaded yet. Please wait a moment and try again.<br>' +
-          'If the issue persists, refresh the page.',
-          'warning'
-        );
+      if (useRV) {
+        if (typeof responsiveVoice !== 'undefined') {
+          console.log('%c[TTS FIX v2] Using ResponsiveVoice for ' + ttsLang.toUpperCase(), 'color:#3b82f6;font-weight:bold');
+        } else {
+          console.warn('[TTS FIX v2] ResponsiveVoice NOT loaded — check internet connection');
+          alert('⚠️ Voice engine not loaded. Please check your internet connection and refresh the page.');
+        }
+      } else {
+        console.log('[TTS FIX v2] Using local Web Speech API for ' + ttsLang.toUpperCase());
       }
     }
 
@@ -975,14 +962,18 @@ class Theater {
     // 1. Try ResponsiveVoice for Indic languages
     if (this.shouldUseRV(ttsLang) && typeof responsiveVoice !== 'undefined') {
       const voiceName = this.getRVVoice(ttsLang);
+      console.log('[TTS FIX v2] Speaking with ResponsiveVoice:', voiceName);
       return new Promise((resolve) => {
         responsiveVoice.speak(text, voiceName, {
           rate: 0.9,
           pitch: 1,
           volume: 1,
-          onend: () => resolve(true),
+          onend: () => {
+            console.log('[TTS FIX v2] ResponsiveVoice finished');
+            resolve(true);
+          },
           onerror: (e) => {
-            console.warn('[TTS] ResponsiveVoice error:', e);
+            console.warn('[TTS FIX v2] ResponsiveVoice error:', e);
             resolve(false);
           }
         });
@@ -992,7 +983,7 @@ class Theater {
     // 2. Try Web Speech API for English and other languages
     const synth = window.speechSynthesis;
     if (!synth) {
-      console.warn('[TTS] Web Speech API not available');
+      console.warn('[TTS FIX v2] Web Speech API not available');
       return false;
     }
     synth.cancel();
@@ -1014,7 +1005,7 @@ class Theater {
       const done = (ok) => { if (!resolved) { resolved = true; resolve(ok); } };
       utter.onend = () => done(true);
       utter.onerror = (e) => {
-        console.warn('[TTS] Utterance error:', e.error);
+        console.warn('[TTS FIX v2] Web Speech error:', e.error);
         done(false);
       };
       setTimeout(() => done(false), 15000);
