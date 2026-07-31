@@ -1,32 +1,32 @@
-# Chandamama Podcast — TTS Fix (Surgical)
+# Chandamama Podcast — TTS Fix v3
 
 ## What Changed
 
-ONLY `assets/js/app.js` was modified. Two functions replaced:
+Only `assets/js/app.js` was modified. Four changes in the `play()` method:
 
-- `speakWithGoogleTTS()` — now routes to Web Speech API
-- `playGoogleTTSChunk()` — now uses `SpeechSynthesisUtterance` instead of dead `translate.google.com`
+1. **Added `forceRV` logic** — When an Indic language (Telugu, Hindi, Tamil, etc.) has no native local voice, `forceRV` becomes `true` even if a fallback voice (e.g. Hindi for Telugu) was found.
 
-## Files Unchanged
+2. **Updated notice banner** — Shows "Using ResponsiveVoice TTS" when `forceRV` is active.
 
-- `index.html` — full UI (language select, translate, theater, story list)
-- `assets/js/pdf-processor.js` — PDF parsing
-- `assets/css/style.css` — styles
-- All language files, RSS, stories
+3. **Guarded local voice path** — Skips `SpeechSynthesisUtterance` when `forceRV` is true, preventing a Hindi voice from reading Telugu text.
+
+4. **Routed fallback Indic to ResponsiveVoice** — The `else if` branch now catches `!canSpeak || forceRV` and calls `speakWithGoogleTTS()` which uses ResponsiveVoice cloud TTS.
+
+## Files in this ZIP
+
+- `index.html` — unchanged (already includes ResponsiveVoice script)
+- `assets/js/app.js` — fixed TTS routing
 
 ## How to Deploy
 
 1. Extract this ZIP
-2. Upload ALL files to your GitHub repo root (overwrite existing)
-3. Commit: `Fix TTS: replace dead Google endpoint with Web Speech API`
-4. Wait 2-5 minutes for GitHub Pages
-5. Hard refresh: `Ctrl + F5`
+2. Overwrite your repo files with these
+3. Commit: `Fix play() to force ResponsiveVoice for Indic languages without native voice`
+4. Wait 2–5 min for GitHub Pages
+5. Hard refresh: `Ctrl + Shift + R`
 
 ## Verify
 
-Open console (F12), select a language, translate, click Play:
-```
-[TTS] Using Web Speech API (Google endpoint is dead)
-```
-
-Audio now speaks dynamically in the selected language using your browser's built-in voice.
+Open console (F12), select Telugu (TE), translate, click Play Theater:
+- You should see: `[TTS FIX v2] Using ResponsiveVoice for TE`
+- You should NOT see: `Using fallback voice: Microsoft David` or any Hindi voice for Telugu text

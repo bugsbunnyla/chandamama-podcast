@@ -767,6 +767,11 @@ class Theater {
     const canSpeak = !!voice;
     const isFallback = canSpeak && !hasNativeVoice;
 
+    // FIX v3: For Indic languages without native voice, force ResponsiveVoice path
+    // instead of using fallback local voice (e.g. Hindi voice for Telugu text)
+    const useRV = this.shouldUseRV(this.lang);
+    const forceRV = useRV && isFallback;
+
     let overlay = document.getElementById('theaterOverlay');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -788,8 +793,8 @@ class Theater {
 
     const noticeEl = document.getElementById('theaterNotice');
     if (noticeEl) {
-      if (!canSpeak) {
-        noticeEl.innerHTML = `<p style="color:#fbbf24;">🌐 Using Google Translate TTS for ${langName}.<br><span style="font-size:0.8rem;">No local ${langName} voice found. Using web-based speech instead.</span></p>`;
+      if (!canSpeak || forceRV) {
+        noticeEl.innerHTML = `<p style="color:#fbbf24;">🌐 Using ResponsiveVoice TTS for ${langName}.<br><span style="font-size:0.8rem;">No local ${langName} voice found. Using cloud-based speech instead.</span></p>`;
       } else if (isFallback) {
         noticeEl.innerHTML = `<p style="color:#fbbf24;">⚠️ Using fallback voice: ${voice.name} (${voice.lang}).<br><span style="font-size:0.8rem;">For native ${langName} speech, install a ${langName} voice in Windows Settings → Speech.</span></p>`;
       } else {
@@ -813,7 +818,8 @@ class Theater {
       if (lineEl) { lineEl.textContent = text; lineEl.style.opacity = '1'; lineEl.style.transform = 'translateY(0)'; }
 
       // Try to speak
-      if (text && canSpeak && voice) {
+      // FIX v3: Skip local voice path for Indic languages when we only have a fallback voice
+      if (text && canSpeak && voice && !forceRV) {
         // LOCAL VOICE PATH: we found a matching local voice
         const utter = new SpeechSynthesisUtterance(text);
         utter.voice = voice;
@@ -848,8 +854,8 @@ class Theater {
           utter.onerror = (e) => { console.warn('[TTS] Error:', e.error); done(); };
           setTimeout(done, 15000);
         });
-      } else if (text && !canSpeak) {
-        // GOOGLE TTS PATH: no local voice found - use Google Translate TTS for EVERY line
+      } else if (text && (!canSpeak || forceRV)) {
+        // RESPONSIVEVOICE PATH: no native local voice found - use cloud TTS for Indic languages
         const spoken = await this.speakWithGoogleTTS(text, this.lang);
         if (!spoken) {
           // If Google TTS fails, show text with reading time
